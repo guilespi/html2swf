@@ -219,14 +219,16 @@
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
          (map #(translate % (cons node ancestry) styles) child-wo-header)])
       [:mx:Grid {:backgroundColor (color-as-hex (:background-color attrs))
-                 :borderStyle "solid"}
+                 :borderStyle "solid"
+                 :width "100%"}
        (map #(translate % (cons node ancestry) styles) (children node))])))
 
 (defn translate-header-image
   "Creates an image cell to be used on an article header"
-  [image]
-  [:mx:GridItem {:width 100
-                 :verticalAlign "middle"}
+  [image align]
+  [:mx:GridItem {:width "10%"
+                 :verticalAlign "middle"
+                 :paddingLeft (if (= align :left) "30" "0")}
    [:mx:Image {:width 100
                :height 50
                :verticalAlign "middle"
@@ -235,42 +237,67 @@
 
 (defn translate-header-text
   "Creates a text cell to be used on an article header"
-  [text attrs align-position]
+  [text attrs align size]
   [:mx:GridItem {:verticalAlign "middle"
-                 :width 700}
-   [:mx:Label {:width "100%"
+                 :width size
+                 :colSpan (if (= size "100%") 2 1)}
+   [:mx:Label {:width (if (= align :left) "850" "800")
                :text (inline-trim text)
                :fontSize (parse-font-size (:font-size attrs))
                :color (color-as-hex (:color attrs))
                :fontWeight "bold"
-               :paddingLeft "30"
-               :textAlign align-position}]])
+               :paddingLeft (if (= align :left) "30" "0")
+               :paddingRight (if (= align :right) "30" "0")
+               :textAlign (name align)}]])
 
-(defn parse-header
+(defn translate-header
+  "Creates a header with an optional image located on the right or
+   on the left of the header. The text is aligned according to the 
+   image position"
+  [node attrs]
+  (if-let [image (extract-image attrs)]
+    (if (= :right (:position image))
+      (seq [(translate-header-text (first (:content node)) attrs :left "90%")
+            (translate-header-image image :right)])
+      (seq [(translate-header-image image :left)
+            (translate-header-text (first (:content node)) attrs :right "90%")]))
+    (translate-header-text (first (:content node)) attrs :left "100%")))
+
+(defn build-single-row-header
+  "Creates a header row using a single row-single header"
   [node ancestry styles]
-  (let [attrs (styles-for-node node ancestry styles)
-        image (extract-image attrs)
-        base-header [:mx:GridRow {:height 50
-                                  :width "100%"
-                                  :backgroundColor (color-as-hex (:background-color attrs))}
-                     (translate-header-text (first (:content node)) attrs "left")]]
-    (if image
-      (conj base-header (translate-header-image image))
-      base-header)))
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:mx:GridRow {:height 50
+                  :width "100%"
+                  :backgroundColor (color-as-hex (:background-color attrs))}
+     (translate-header node attrs)]))
 
 (defmethod translate :h2
   [node ancestry styles]
   (println "Translating h2 ")
-  (parse-header node ancestry styles))
+  (build-single-row-header node ancestry styles))
 
 (defmethod translate :h3
   [node ancestry styles]
   (println "Translating h3")
-  (parse-header node ancestry styles))
+  (build-single-row-header node ancestry styles))
+
+(defmethod translate :h4
+  [node ancestry styles]
+  (println "Translating h4")
+  (map #(translate % (cons node ancestry) styles) (children node)))
+
+(defmethod translate :table
+  [node ancestry styles])
 
 (defmethod translate :hgroup
   [node ancestry styles]
   (println "Translating hgroup")
+  (map #(translate % (cons node ancestry) styles) (children node)))
+
+(defmethod translate :section
+  [node ancestry styles]
+  (println "Translating section")
   (map #(translate % (cons node ancestry) styles) (children node)))
 
 (defmethod translate :p
@@ -278,14 +305,14 @@
   (println "Translating p")
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridRow {:width "100%"}
-     [:mx:GridItem {:width "100%" 
-                    :verticalAlign "top"}
-      [:mx:Text {:width "100%"
+     [:mx:GridItem {:verticalAlign "top"
+                    :colSpan "4"} ;;maximum columns article header has
+      [:mx:Text {:width "98%"
+                 :paddingLeft "30"
                  :text (inline-trim (first (:content node)))
                  :fontSize (parse-font-size (:font-size attrs))
                  :color (color-as-hex (:color attrs))
                  :fontWeight (:font-weight attrs)
-                 :paddingLeft "20"
                  :textAlign "left"}]]]))
 
 (def ^:dynamic *compiler* "/Users/guilespi/Downloads/flex_sdk_4.6/bin/mxmlc")
@@ -306,6 +333,7 @@
    as root for css and image search"
   [htmlfile base-directory]
   (let [filename (first htmlfile)
+        _ (println "Translating " filename)
         html-content (:html (second htmlfile))
         sheets (stylesheets html-content base-directory)
         styles (parse-stylesheets sheets)
