@@ -159,11 +159,15 @@
 
 (defn extract-image
   "Read other attributes of the image such as location (right bottom etc"
-  [attributes]
-  (when-let [background-image (:background-image attributes)]
+  [attrs]
+  (when-let [background-image (:background-image attrs)]
     ;;FIXME: this extraction is broken only works if images and CSS are in subdirectories
     ;;of the main path, probably to happen, but broken anyway
-    {:path (second (re-find #"url\(\.\./([^)]+)" background-image))}))
+    {:path (second (re-find #"url\(\.\./([^)]+)" background-image))
+     :position (if (and (:background-position attrs)
+                        (re-find #"left" (:background-position attrs)))
+                 :left
+                 :right)}))
 
 (defn rgb-int-from-components
   "Convert a vector of the 3 rgb integer values into a color given in
@@ -175,8 +179,9 @@
 
 (defn color-as-hex
   [rgb-color]
-  (let [[_ r g b] (re-find #"rgb\((\d+), (\d+), (\d+)\)" rgb-color)]
-    (format "#%06X" (rgb-int-from-components (Integer. r) (Integer. g) (Integer. b)))))
+  (when rgb-color
+    (let [[_ r g b] (re-find #"rgb\((\d+), (\d+), (\d+)\)" rgb-color)]
+      (format "#%06X" (rgb-int-from-components (Integer. r) (Integer. g) (Integer. b))))))
 
 (defn parse-font-size
   [font-size]
@@ -196,17 +201,50 @@
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:Application {:xmlns:mx "library://ns.adobe.com/flex/mx"
                       :xmlns:fx "http://ns.adobe.com/mxml/2009" 
-                      :xmlns:s "library://ns.adobe.com/flex/spark" }
-     [:mx:Grid {:backgroundColor (color-as-hex (:color attrs))
-                :width 800
-                :height 600}
-      (map #(translate % (cons node ancestry) styles) (children node))]]))
+                      :xmlns:s "library://ns.adobe.com/flex/spark" 
+                      :backgroundColor (color-as-hex (:background-color attrs))
+                      :width 1024
+                      :height 768}
+      (map #(translate % (cons node ancestry) styles) (children node))]))
 
 (defmethod translate :article 
   [node ancestry styles]  
   (println "Translating article")
-  [:s:BorderContainer {:borderWeight "20"}
-   (map #(translate % (cons node ancestry) styles) (children node))])
+  (let [attrs (styles-for-node node ancestry styles)] 
+    ;;if has child articles just draw a box, if 
+    ;;leaf article draw a grid
+    (if (seq (filter #(= (:tag %) :article) (children node)))
+      (let [childs (children node)
+            child-wo-header (filter #(not= (:tag %) :h2) childs)] ;;remove supeflous h2 tags present in nested arts
+        [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
+         (map #(translate % (cons node ancestry) styles) child-wo-header)])
+      [:mx:Grid {:backgroundColor (color-as-hex (:background-color attrs))
+                 :borderStyle "solid"}
+       (map #(translate % (cons node ancestry) styles) (children node))])))
+
+(defn translate-header-image
+  "Creates an image cell to be used on an article header"
+  [image]
+  [:mx:GridItem {:width 100
+                 :verticalAlign "middle"}
+   [:mx:Image {:width 100
+               :height 50
+               :verticalAlign "middle"
+               :source (format "@Embed(source='%s')" 
+                               (:path image))}]])
+
+(defn translate-header-text
+  "Creates a text cell to be used on an article header"
+  [text attrs align-position]
+  [:mx:GridItem {:verticalAlign "middle"
+                 :width 700}
+   [:mx:Label {:width "100%"
+               :text (inline-trim text)
+               :fontSize (parse-font-size (:font-size attrs))
+               :color (color-as-hex (:color attrs))
+               :fontWeight "bold"
+               :paddingLeft "30"
+               :textAlign align-position}]])
 
 (defn parse-header
   [node ancestry styles]
@@ -215,23 +253,9 @@
         base-header [:mx:GridRow {:height 50
                                   :width "100%"
                                   :backgroundColor (color-as-hex (:background-color attrs))}
-                     [:mx:GridItem {:verticalAlign "middle"
-                                    :width 700}
-                      [:mx:Label {:width "100%"
-                                  :text (inline-trim (first (:content node)))
-                                  :fontSize (parse-font-size (:font-size attrs))
-                                  :color (color-as-hex (:color attrs))
-                                  :fontWeight "bold"
-                                  :paddingLeft "30"
-                                  :textAlign "left"}]]]]
+                     (translate-header-text (first (:content node)) attrs "left")]]
     (if image
-      (conj base-header [:mx:GridItem {:width 100
-                                       :verticalAlign "middle"}
-                         [:mx:Image {:width 100
-                                     :height 50
-                                     :verticalAlign "middle"
-                                     :source (format "@Embed(source='%s')" 
-                                                     (:path image))}]])
+      (conj base-header (translate-header-image image))
       base-header)))
 
 (defmethod translate :h2
