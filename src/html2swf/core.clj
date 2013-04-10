@@ -1,4 +1,4 @@
-(ns testlet-converter.html2swf
+(ns html2swf.core
   (:require [clojure.java.io]
             [net.cgrand.enlive-html :as html]
             [hiccup.core :as hiccup]
@@ -284,6 +284,11 @@
 
 (defmethod translate :table
   [node ancestry styles])
+
+(defmethod translate :footer
+  [node ancestry styles]
+  (let [attrs (styles-for-node node ancestry styles)]
+    (translate-header node attrs)))
 
 (defmethod translate :hgroup
   [node ancestry styles]

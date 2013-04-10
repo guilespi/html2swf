@@ -1,6 +1,6 @@
-(ns testlet-converter.html2swf-test
+(ns html2swf.html2swf-test
   (:require 
-   [testlet-converter.html2swf :as h2s]
+   [html2swf.html2swf :as h2s]
    [net.cgrand.enlive-html :as html])
   (:use 
    midje.sweet)

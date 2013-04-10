@@ -1,3 +1,3 @@
-# Introduction to testlet-converter
+# Introduction to html2swf
 
 TODO: write [great documentation](http://jacobian.org/writing/great-documentation/what-to-write/)

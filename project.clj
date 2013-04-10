@@ -1,4 +1,4 @@
-(defproject testlet-converter "0.2.0"
+(defproject html2swf "0.2.0"
   :description "Testlet converter service"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
