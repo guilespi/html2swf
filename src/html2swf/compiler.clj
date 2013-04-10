@@ -33,6 +33,6 @@
 (defn build-directory
   "Convert a complete directory of html files to swf ones"
   [base-directory]
-  (println "Building directory " base-directory)
+  (println "Building directory" base-directory)
   (let [files (parser/read-html-files base-directory)]
     (doall (map #(build-file % base-directory) files))))

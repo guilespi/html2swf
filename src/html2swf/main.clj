@@ -1,4 +1,5 @@
 (ns html2swf.main
+  (:gen-class)
   (:require [html2swf.compiler :as compiler])
   (:use [clojure.tools.cli :only [cli]]))
 
