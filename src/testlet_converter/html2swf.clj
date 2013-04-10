@@ -218,7 +218,7 @@
             child-wo-header (filter #(not= (:tag %) :h2) childs)] ;;remove supeflous h2 tags present in nested arts
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
          (map #(translate % (cons node ancestry) styles) child-wo-header)])
-      [:mx:Grid {:backgroundColor (color-as-hex (:background-color attrs))
+      [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                  :borderStyle "solid"
                  :width "100%"}
        (map #(translate % (cons node ancestry) styles) (children node))])))
@@ -226,29 +226,21 @@
 (defn translate-header-image
   "Creates an image cell to be used on an article header"
   [image align]
-  [:mx:GridItem {:width "10%"
-                 :verticalAlign "middle"
-                 :paddingLeft (if (= align :left) "30" "0")}
-   [:mx:Image {:width 100
-               :height 50
-               :verticalAlign "middle"
-               :source (format "@Embed(source='%s')" 
-                               (:path image))}]])
+  [:mx:Image {:width 100
+              :height 50
+              :verticalAlign "middle"
+              :source (format "@Embed(source='%s')" 
+                              (:path image))}])
 
 (defn translate-header-text
   "Creates a text cell to be used on an article header"
-  [text attrs align size]
-  [:mx:GridItem {:verticalAlign "middle"
-                 :width size
-                 :colSpan (if (= size "100%") 2 1)}
-   [:mx:Label {:width (if (= align :left) "850" "800")
-               :text (inline-trim text)
-               :fontSize (parse-font-size (:font-size attrs))
-               :color (color-as-hex (:color attrs))
-               :fontWeight "bold"
-               :paddingLeft (if (= align :left) "30" "0")
-               :paddingRight (if (= align :right) "30" "0")
-               :textAlign (name align)}]])
+  [text attrs align]
+  [:mx:Label {:width (if (= align :left) "850" "800")
+              :text (inline-trim text)
+              :fontSize (parse-font-size (:font-size attrs))
+              :color (color-as-hex (:color attrs))
+              :fontWeight "bold"
+              :textAlign (or (:text-align attrs) (name align))}])
 
 (defn translate-header
   "Creates a header with an optional image located on the right or
@@ -257,19 +249,21 @@
   [node attrs]
   (if-let [image (extract-image attrs)]
     (if (= :right (:position image))
-      (seq [(translate-header-text (first (:content node)) attrs :left "90%")
+      (seq [(translate-header-text (first (:content node)) attrs :left)
             (translate-header-image image :right)])
       (seq [(translate-header-image image :left)
-            (translate-header-text (first (:content node)) attrs :right "90%")]))
-    (translate-header-text (first (:content node)) attrs :left "100%")))
+            (translate-header-text (first (:content node)) attrs :right)]))
+    (translate-header-text (first (:content node)) attrs :left)))
 
 (defn build-single-row-header
   "Creates a header row using a single row-single header"
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
-    [:mx:GridRow {:height 50
-                  :width "100%"
-                  :backgroundColor (color-as-hex (:background-color attrs))}
+    [:mx:HBox {:width "100%"
+               :height "50"
+               :verticalAlign "middle"
+               :backgroundColor (color-as-hex (:background-color attrs))}
+     [:mx:Label {:paddingLeft "5"}]
      (translate-header node attrs)]))
 
 (defmethod translate :h2
@@ -304,16 +298,23 @@
   [node ancestry styles]
   (println "Translating p")
   (let [attrs (styles-for-node node ancestry styles)]
-    [:mx:GridRow {:width "100%"}
-     [:mx:GridItem {:verticalAlign "top"
-                    :colSpan "4"} ;;maximum columns article header has
-      [:mx:Text {:width "98%"
-                 :paddingLeft "30"
-                 :text (inline-trim (first (:content node)))
-                 :fontSize (parse-font-size (:font-size attrs))
-                 :color (color-as-hex (:color attrs))
-                 :fontWeight (:font-weight attrs)
-                 :textAlign "left"}]]]))
+    [:mx:HBox {:width "100%" 
+               :verticalAlign "middle" 
+               :backgroundColor (color-as-hex (:background-color attrs))}
+     [:mx:Label {:paddingLeft "5"}]
+     [:mx:Text {:width "98%"
+                :text (inline-trim (first (:content node)))
+                :fontSize (parse-font-size (:font-size attrs))
+                :color (color-as-hex (:color attrs))
+                :fontWeight (:font-weight attrs)
+                :textAlign "left"}]]))
+
+;;rotos:
+;;8   -> broken on link
+;;108 -> color de fondo text => no parsea p:first-entry
+;;120 -> image va abajo quedo a la izquierda
+;;110 -> falta imagen, podria ser mas chico
+;;119 -> falta raya abajo
 
 (def ^:dynamic *compiler* "/Users/guilespi/Downloads/flex_sdk_4.6/bin/mxmlc")
 
