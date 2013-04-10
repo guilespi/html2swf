@@ -9,11 +9,12 @@
 (defn compile-source
   "From a proper mxml string create a filename.swf file"
   [filename content]
-  (println (format "Compiling %s..." filename))
+  (println (format "Compiling %s.mxml ..." filename))
   (let [source-file (str filename ".mxml")
-        mxml (str "<?xml version=\"1.0\" encoding=\"utf-8\"?>" content)]
+        mxml (str "<?xml version=\"1.0\" encoding=\"utf-8\"?>" content)
+        compiler (or (System/getenv "MXML_COMPILER") *compiler*)]
     (spit source-file mxml :append false)
-    (let [result (sh *compiler* "-debug=false" "-swf-version=10" source-file)
+    (let [result (sh compiler "-debug=false" "-swf-version=10" source-file)
           exit (:exit result)]
       (= 0 exit))))
 
