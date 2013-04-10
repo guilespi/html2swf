@@ -218,10 +218,11 @@
             child-wo-header (filter #(not= (:tag %) :h2) childs)] ;;remove supeflous h2 tags present in nested arts
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
          (map #(translate % (cons node ancestry) styles) child-wo-header)])
-      [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
-                 :borderStyle "solid"
-                 :width "100%"}
-       (map #(translate % (cons node ancestry) styles) (children node))])))
+      (let [image (extract-image attrs)] 
+        [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
+                   :borderStyle "solid"
+                   :width "100%"}
+         (map #(translate % (cons node ancestry) styles) (children node))]))))
 
 (defn translate-header-image
   "Creates an image cell to be used on an article header"
@@ -294,23 +295,34 @@
   (println "Translating section")
   (map #(translate % (cons node ancestry) styles) (children node)))
 
+(defmethod translate :span
+  [node ancestry styles]
+  (println "Translating span")
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:s:span {:textDecoration (or (:text-decoration attrs) "none")
+              :backgroundColor (color-as-hex (:background-color attrs))}
+     (html/text node)]))
+
 (defmethod translate :p
   [node ancestry styles]
   (println "Translating p")
-  (let [attrs (styles-for-node node ancestry styles)]
+  (let [attrs (styles-for-node node ancestry styles)
+        childs (:content node)]
     [:mx:HBox {:width "100%" 
                :verticalAlign "middle" 
                :backgroundColor (color-as-hex (:background-color attrs))}
      [:mx:Label {:paddingLeft "5"}]
-     [:mx:Text {:width "98%"
-                :text (inline-trim (first (:content node)))
-                :fontSize (parse-font-size (:font-size attrs))
-                :color (color-as-hex (:color attrs))
-                :fontWeight (:font-weight attrs)
-                :textAlign "left"}]]))
+     [:s:RichEditableText {:editable "false"
+                           :focusEnabled "false"
+                           :width "850"
+                           :fontSize (parse-font-size (:font-size attrs))
+                           :fontWeight (:font-weight attrs)
+                           :color (color-as-hex (:color attrs))}
+      (map #(if (string? %)
+              (inline-trim %)
+              (translate % (cons node ancestry) styles)) childs)]]))
 
 ;;rotos:
-;;8   -> broken on link
 ;;108 -> color de fondo text => no parsea p:first-entry
 ;;120 -> image va abajo quedo a la izquierda
 ;;110 -> falta imagen, podria ser mas chico
