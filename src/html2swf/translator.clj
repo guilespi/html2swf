@@ -83,26 +83,28 @@
 
 (defn translate-header-text
   "Creates a text cell to be used on an article header"
-  [text attrs align]
-  [:mx:Label {:width (if (= align :left) "850" "800")
-              :text (inline-trim text)
-              :fontSize (parse-font-size (:font-size attrs))
-              :color (color-as-hex (:color attrs))
-              :fontWeight "bold"
-              :textAlign (or (:text-align attrs) (name align))}])
+  [node ancestry styles]
+  (let [attrs (styles-for-node node ancestry styles)
+        text (html/text node)]
+    [:mx:Label {:width "850"
+                :text (inline-trim text)
+                :fontSize (parse-font-size (:font-size attrs))
+                :color (color-as-hex (:color attrs))
+                :fontWeight "bold"
+                :textAlign (:text-align attrs)}]))
 
 (defn translate-header
   "Creates a header with an optional image located on the right or
    on the left of the header. The text is aligned according to the 
    image position"
-  [node attrs]
+  [node attrs ancestry styles]
   (if-let [image (extract-image attrs)]
     (if (= :right (:position image))
-      (seq [(translate-header-text (first (:content node)) attrs :left)
+      (seq [(translate-seq node (children node) ancestry styles)
             (translate-header-image image :right)])
       (seq [(translate-header-image image :left)
-            (translate-header-text (first (:content node)) attrs :right)]))
-    (translate-header-text (first (:content node)) attrs :left)))
+            (translate-seq node (children node) ancestry styles)]))
+    (translate-seq node (children node) ancestry styles)))
 
 (defn build-single-row-header
   "Creates a header row using a single row-single header"
@@ -113,27 +115,22 @@
                :verticalAlign "middle"
                :backgroundColor (color-as-hex (:background-color attrs))}
      [:mx:Label {:paddingLeft "5"}]
-     (translate-header node attrs)]))
+     (translate-header node attrs ancestry styles)]))
 
 (defmethod translate :h2
   [node ancestry styles]
-  (println "Translating h2 ")
-  (build-single-row-header node ancestry styles))
+  (println "Translating h2")
+  (translate-header-text node ancestry styles))
 
 (defmethod translate :h3
   [node ancestry styles]
   (println "Translating h3")
-  (build-single-row-header node ancestry styles))
-
-(defmethod translate :h4
-  [node ancestry styles]
-  (println "Translating h4")
-  (translate-seq node (children node) ancestry styles))
+  (translate-header-text node ancestry styles))
 
 (defmethod translate :header
   [node ancestry styles]
   (println "Translating header")
-  (translate-seq node (children node) ancestry styles))
+  (build-single-row-header node ancestry styles))
 
 (defmethod translate :table
   [node ancestry styles])
@@ -169,7 +166,7 @@
 
 (defmethod translate :p
   [node ancestry styles]
-  (println "Translating p")
+  (println "Translating p with index" (:index (first ancestry)))
   (let [attrs (styles-for-node node ancestry styles)
         childs (:content node)]
     [:mx:HBox {:width "100%" 
