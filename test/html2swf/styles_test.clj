@@ -167,6 +167,24 @@ html, body, #id {
                                 [{:node div :index 1} {:node body :index 1}] 
                                 [[:body.a :> :article {:font-size 15}]])) => {}
 
+      ;;multiple parents matching
+      (let [body (first (html/select html1 [:body]))
+            div (first (html/select html1 [:div]))
+            article (first (html/select html1 [:article]))]
+        (styles/styles-for-node article
+                                [{:node div :index 1} {:node body :index 1}] 
+                                [[:body :> :div :> :article {:font-size 15}]])) => {:font-size 15}
+
+     ;;multiple parents not matching
+      (let [body (first (html/select html1 [:body]))
+            div (first (html/select html1 [:div]))
+            article (first (html/select html1 [:article]))]
+        (styles/styles-for-node article
+                                [{:node div :index 1} {:node body :index 1}] 
+                                [[:a :> :div :> :article {:font-size 15}]])) => {}
+
+     
+
 )
 
 (h html2 "<body class=\"a b c\"><div class=\"a\"><article id=\"art1\">content</article><article id=\"art2\">content2</article></div></body>")

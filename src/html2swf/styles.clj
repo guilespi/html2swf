@@ -89,10 +89,8 @@
               (when (partial-condition-match? (nth (reverse selector) 2 "") 
                                               (:node (first ancestry))
                                               (rest ancestry))
-                {:a (rest ancestry)
-                 :s (drop-last 3 selector)})
-              {:a ancestry
-               :s (drop-last 1 selector)}))))
+                (drop-last 2 selector))
+              (drop-last 1 selector)))))
 
 (defn trim-ancestry
   ;;drop parents until found one matching the next selector
@@ -111,10 +109,10 @@
   [node ancestry selector]
   (loop [n node parents ancestry s selector]
     ;;current node matches for last selector tag
-    (when-let [{new-selector :s new-parents :a} (selector-match? n s parents)]
+    (when-let [new-selector (selector-match? n s parents)]
       ;;if no more selectors found, this is a WIN
       (if (seq new-selector)
-        (let [ancestry (trim-ancestry new-selector new-parents)] 
+        (let [ancestry (trim-ancestry new-selector parents)] 
           (recur (:node (first ancestry)) (rest ancestry) new-selector))
         true))))
 
