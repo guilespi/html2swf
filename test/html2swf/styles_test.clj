@@ -2,6 +2,7 @@
   (:require 
    [html2swf.styles :as styles]
    [net.cgrand.enlive-html :as html])
+
   (:use 
    midje.sweet)
   (:import 
@@ -103,7 +104,7 @@ html, body, #id {
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
        (styles/styles-for-node article
-                            [div body] 
+                            [{:node div :index 1} {:node body :index 1}] 
                           [[:body :div :article {:font-size 15}]])) => {:font-size 15}
 
      ;;parent sequence rule intercalated
@@ -111,7 +112,7 @@ html, body, #id {
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
        (styles/styles-for-node article
-                            [div body] 
+                            [{:node div :index 1} {:node body :index 1}] 
                           [[:body :article {:font-size 15}]])) => {:font-size 15}
 
      ;;parent sequence rule invalid
@@ -119,7 +120,7 @@ html, body, #id {
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
        (styles/styles-for-node article
-                            [div body] 
+                            [{:node div :index 1} {:node body :index 1}] 
                           [[:body :div {:font-size 15}]])) => {}
 
      ;;parent sequence rule invalid on loop
@@ -127,7 +128,7 @@ html, body, #id {
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
        (styles/styles-for-node article
-                            [div body] 
+                            [{:node div :index 1} {:node body :index 1}] 
                           [[:ul :article {:font-size 15}]])) => {}
 
      ;;merging with hierarchy rules, mixed
@@ -135,7 +136,7 @@ html, body, #id {
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
        (styles/styles-for-node article
-                            [div body] 
+                            [{:node div :index 1} {:node body :index 1}] 
                           [[:*.a :div :article {:font-size 15}]
                            [:article {:font-name "Arial"}]])) => {:font-size 15 :font-name "Arial"})
 
@@ -147,7 +148,7 @@ html, body, #id {
             div (first (html/select html1 [:div]))
             article (first (html/select html1 [:article]))]
         (styles/styles-for-node article
-                                [div body] 
+                                [{:node div :index 1} {:node body :index 1}] 
                                 [[:div :> :article {:font-size 15}]])) => {:font-size 15}
 
       ;;one parent and the rest normal
@@ -155,7 +156,7 @@ html, body, #id {
             div (first (html/select html1 [:div]))
             article (first (html/select html1 [:article]))]
         (styles/styles-for-node article
-                                [div body] 
+                                [{:node div :index 1} {:node body :index 1}] 
                                 [[:body :div :> :article {:font-size 15}]])) => {:font-size 15}
                                 
       ;;matching selector but not matching parent
@@ -163,12 +164,49 @@ html, body, #id {
             div (first (html/select html1 [:div]))
             article (first (html/select html1 [:article]))]
         (styles/styles-for-node article
-                                [div body] 
+                                [{:node div :index 1} {:node body :index 1}] 
                                 [[:body.a :> :article {:font-size 15}]])) => {}
 
 )
 
+(h html2 "<body class=\"a b c\"><div class=\"a\"><article id=\"art1\">content</article><article id=\"art2\">content2</article></div></body>")
 
+(fact "Check selector with functions"
+
+   ;;first of type
+   (let [body (first (html/select html2 [:body]))
+         div (first (html/select html2 [:div]))
+         article (first (html/select html2 [:#art1]))]
+     (styles/styles-for-node article
+                             [{:node div :index 1} {:node body :index 1}] 
+                             [[:article:first-of-type {:font-size 15}]])) => {:font-size 15}
+
+   ;;first of type, not matching
+   (let [body (first (html/select html2 [:body]))
+         div (first (html/select html2 [:div]))
+         article (first (html/select html2 [:#art2]))]
+     (styles/styles-for-node article
+                             [{:node div :index 2} {:node body :index 1}] 
+                             [[:article:first-of-type {:font-size 15}]])) => {}
+
+   ;;last of type
+   (let [body (first (html/select html2 [:body]))
+         div (first (html/select html2 [:div]))
+         article (first (html/select html2 [:#art2]))]
+     (styles/styles-for-node article
+                             [{:node div :index 2} {:node body :index 1}] 
+                             [[:article:last-of-type {:font-size 15}]])) => {:font-size 15}
+
+   ;;last of type, not matching
+   (let [body (first (html/select html2 [:body]))
+         div (first (html/select html2 [:div]))
+         article (first (html/select html2 [:#art1]))]
+     (styles/styles-for-node article
+                             [{:node div :index 1} {:node body :index 1}] 
+                             [[:article:last-of-type {:font-size 15}]])) => {}
+
+                             
+)
 
 ;;(def hf (parser/read-html-files "/Users/guilespi/Downloads/HTML5/PVIA"))
 ;;(def myf (first (filter #(= (:relative-path (second %)) "/PVIA_PASSAGE6_NOUWM.html") hf)))

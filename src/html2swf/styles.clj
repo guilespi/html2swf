@@ -26,16 +26,28 @@
                                       (re-find #"^[-_a-zA-Z0-9]+$" condition) ::selector-tag)))
 
 (defn selector-function-match?
-  [f n parents]
-  true)
+  [named-fn node parents]
+  (case named-fn
+    :last-of-type (let [tag (:tag node)
+                        parent (first parents)
+                        abs-idx (:index parent)
+                        parent-node (:node parent)
+                        last-childs (drop abs-idx (:content parent-node))]
+                    (empty? (filter #(= (:tag %) tag) last-childs)))
+    :first-of-type (let [tag (:tag node)
+                         parent (first parents)
+                         abs-idx (:index parent)
+                         parent-node (:node parent)
+                         first-childs (take (dec abs-idx) (:content parent-node))]
+                     (empty? (filter #(= (:tag %) tag) first-childs)))))
 
 ;;this are the selector:nth-of-type kind of selectors
 ;;first need to match first side traditionally then check if the function is true
 (defmethod partial-condition-match? ::special-function
   [condition node ancestry]
-  (when-let [[_ selector function] (re-find #"([^:]):(.+)$" condition)]
-    (when (partial-condition-match? selector node)
-      (selector-function-match? function node ancestry))))
+  (when-let [[_ selector function] (re-find #"([^:]+):(.+)$" condition)]
+    (when (partial-condition-match? selector node ancestry)
+      (selector-function-match? (keyword function) node ancestry))))
 
 (defmethod partial-condition-match? ::selector-id
   [condition node ancestry]
@@ -75,7 +87,7 @@
             ;;and trim the selector and the parent
             (if (= ">" (last (butlast selector)))
               (when (partial-condition-match? (nth (reverse selector) 2 "") 
-                                              (first ancestry)
+                                              (:node (first ancestry))
                                               (rest ancestry))
                 {:a (rest ancestry)
                  :s (drop-last 3 selector)})
@@ -90,7 +102,7 @@
   [selector nodes]
   (loop [ancestry nodes]
     (when (seq ancestry)
-      (if (selector-match? (first ancestry) selector (rest ancestry))
+      (if (selector-match? (:node (first ancestry)) selector (rest ancestry))
         ancestry
         (recur (rest ancestry))))))
 
@@ -103,7 +115,7 @@
       ;;if no more selectors found, this is a WIN
       (if (seq new-selector)
         (let [ancestry (trim-ancestry new-selector new-parents)] 
-          (recur (first ancestry) (rest ancestry) new-selector))
+          (recur (:node (first ancestry)) (rest ancestry) new-selector))
         true))))
 
 (defn style-applies?

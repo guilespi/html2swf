@@ -34,6 +34,15 @@
 ;;Translators for each type of html tag
 (defmulti translate (fn [node ancestry styles] (:tag node)))
 
+(defn translate-seq
+  [parent childs ancestry styles]
+  (map-indexed (fn [idx child]
+                 (if (string? child)
+                   (inline-trim child)
+                   (translate child (cons {:index (inc idx)
+                                           :node parent} ancestry) styles))) 
+               childs))
+
 (defmethod translate :body
   [node ancestry styles]
   (println "Translating body")
@@ -56,12 +65,12 @@
       (let [childs (children node)
             child-wo-header (filter #(not= (:tag %) :h2) childs)] ;;remove supeflous h2 tags present in nested arts
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
-         (map #(translate % (cons node ancestry) styles) child-wo-header)])
+         (translate-seq node child-wo-header ancestry styles)])
       (let [image (extract-image attrs)] 
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                    :borderStyle "solid"
                    :width "100%"}
-         (map #(translate % (cons node ancestry) styles) (children node))]))))
+         (translate-seq node (children node) ancestry styles)]))))
 
 (defn translate-header-image
   "Creates an image cell to be used on an article header"
@@ -119,13 +128,12 @@
 (defmethod translate :h4
   [node ancestry styles]
   (println "Translating h4")
-  (map #(translate % (cons node ancestry) styles) (children node)))
+  (translate-seq node (children node) ancestry styles))
 
 (defmethod translate :header
   [node ancestry styles]
   (println "Translating header")
-  (map #(translate % (cons node ancestry) styles) (children node)))
-
+  (translate-seq node (children node) ancestry styles))
 
 (defmethod translate :table
   [node ancestry styles])
@@ -138,12 +146,12 @@
 (defmethod translate :hgroup
   [node ancestry styles]
   (println "Translating hgroup")
-  (map #(translate % (cons node ancestry) styles) (children node)))
+  (translate-seq node (children node) ancestry styles))
 
 (defmethod translate :section
   [node ancestry styles]
   (println "Translating section")
-  (map #(translate % (cons node ancestry) styles) (children node)))
+  (translate-seq node (children node) ancestry styles))
 
 (defmethod translate :b
   [node ancestry styles]
@@ -174,14 +182,12 @@
                            :fontSize (parse-font-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))}
-      (map #(if (string? %)
-              (inline-trim %)
-              (translate % (cons node ancestry) styles)) childs)]]))
+      (translate-seq node childs ancestry styles)]]))
 
 (defn translate-page 
   [html-content styles]
   (let [html-node (first (html/select html-content [:html]))
         ;;assume only one body always present
         body (first (html/select html-node [:body]))
-        markup (translate body [html-node] styles)]
+        markup (translate body [{:index 1 :node html-node}] styles)]
     (hiccup/html markup)))
