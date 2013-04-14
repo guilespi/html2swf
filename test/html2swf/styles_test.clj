@@ -1,6 +1,6 @@
-(ns html2swf.html2swf-test
+(ns html2swf.styles-test
   (:require 
-   [html2swf.html2swf :as h2s]
+   [html2swf.styles :as styles]
    [net.cgrand.enlive-html :as html])
   (:use 
    midje.sweet)
@@ -49,60 +49,60 @@ html, body, #id {
 
 
 (fact "Has classes correctly tested"
-      (h2s/has-class? (first (html/select html1 [:body])) "a") => true
+      (styles/has-class? (first (html/select html1 [:body])) "a") => true
 )
 
 (fact "Correct styles selected for node"   
      ;;only tag   
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:body {:font-size 15}]]) => {:font-size 15}
      ;;tagged class
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:body.a {:font-size 15}]]) => {:font-size 15}
 
      ;;tagged with non existent class
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:body.e {:font-size 15}]]) => {}
 
      ;;only class selector matching
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:*.a {:font-size 15}]]) => {:font-size 15}
 
      ;;only class selector not matching
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:*.e {:font-size 15}]]) => {}
 
      ;multiple selectors same rule
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:*.a :*.e {:font-size 15}]]) => {:font-size 15}
 
      ;;merging multiple matching styles
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:*.a {:font-size 15}]
                            [:*.e {:padding 10}]
                            [:body {:font-face "Arial"}]]) => {:font-face "Arial" :font-size 15}
      
      ;;merging multiple matching styles, correct order respected
-     (h2s/styles-for-node (first (html/select html1 [:body]))
+     (styles/styles-for-node (first (html/select html1 [:body]))
                           [] 
                           [[:*.a {:font-size 15}]
                            [:body {:font-size 20}]]) => {:font-size 20}
 
      ;;parent hierarchy selector correctly matching
-     (h2s/parse-selectors [:body :div :article {:font-size 15}]) => [["body" "div" "article"]]
+     (styles/parse-selectors [:body :div :article {:font-size 15}]) => [["body" "div" "article"]]
  
      ;;parent sequence rule basic
      (let [body (first (html/select html1 [:body]))
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
-       (h2s/styles-for-node article
+       (styles/styles-for-node article
                             [div body] 
                           [[:body :div :article {:font-size 15}]])) => {:font-size 15}
 
@@ -110,7 +110,7 @@ html, body, #id {
      (let [body (first (html/select html1 [:body]))
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
-       (h2s/styles-for-node article
+       (styles/styles-for-node article
                             [div body] 
                           [[:body :article {:font-size 15}]])) => {:font-size 15}
 
@@ -118,7 +118,7 @@ html, body, #id {
      (let [body (first (html/select html1 [:body]))
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
-       (h2s/styles-for-node article
+       (styles/styles-for-node article
                             [div body] 
                           [[:body :div {:font-size 15}]])) => {}
 
@@ -126,7 +126,7 @@ html, body, #id {
      (let [body (first (html/select html1 [:body]))
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
-       (h2s/styles-for-node article
+       (styles/styles-for-node article
                             [div body] 
                           [[:ul :article {:font-size 15}]])) => {}
 
@@ -134,10 +134,44 @@ html, body, #id {
      (let [body (first (html/select html1 [:body]))
            div (first (html/select html1 [:div]))
            article (first (html/select html1 [:article]))]
-       (h2s/styles-for-node article
+       (styles/styles-for-node article
                             [div body] 
                           [[:*.a :div :article {:font-size 15}]
-                           [:article {:font-name "Arial"}]])) => {:font-size 15 :font-name "Arial"}
+                           [:article {:font-name "Arial"}]])) => {:font-size 15 :font-name "Arial"})
+
+
+(fact "Styles with hierarchy operator >"
+
+      ;;only one parent
+      (let [body (first (html/select html1 [:body]))
+            div (first (html/select html1 [:div]))
+            article (first (html/select html1 [:article]))]
+        (styles/styles-for-node article
+                                [div body] 
+                                [[:div :> :article {:font-size 15}]])) => {:font-size 15}
+
+      ;;one parent and the rest normal
+      (let [body (first (html/select html1 [:body]))
+            div (first (html/select html1 [:div]))
+            article (first (html/select html1 [:article]))]
+        (styles/styles-for-node article
+                                [div body] 
+                                [[:body :div :> :article {:font-size 15}]])) => {:font-size 15}
+                                
+      ;;matching selector but not matching parent
+      (let [body (first (html/select html1 [:body]))
+            div (first (html/select html1 [:div]))
+            article (first (html/select html1 [:article]))]
+        (styles/styles-for-node article
+                                [div body] 
+                                [[:body.a :> :article {:font-size 15}]])) => {}
 
 )
+
+
+
+;;(def hf (parser/read-html-files "/Users/guilespi/Downloads/HTML5/PVIA"))
+;;(def myf (first (filter #(= (:relative-path (second %)) "/PVIA_PASSAGE6_NOUWM.html") hf)))
+;;(in-ns 'html2swf.parser)
+;;(def sheets (stylesheets (:html (second user/myf)) "/Users/guilespi/Downloads/HTML5/PVIA/"))
 

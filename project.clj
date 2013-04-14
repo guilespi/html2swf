@@ -8,5 +8,5 @@
                  [clj-css "0.1.1"]
                  [enlive "1.1.2"]
                  [hiccup "1.0.3"]
-                 [midje "1.4.0"]
+                 [midje "1.5.1"]
                  [org.clojure/tools.cli "0.2.2"]])

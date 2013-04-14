@@ -1,5 +1,5 @@
 (ns html2swf.translator
-  (:require [html2swf.styles :as styles :refer [styles-for-node]]
+  (:require [html2swf.styles :refer [styles-for-node]]
             [net.cgrand.enlive-html :as html]
             [hiccup.core :as hiccup])
   (:use [html2swf.utils]))
@@ -121,6 +121,12 @@
   (println "Translating h4")
   (map #(translate % (cons node ancestry) styles) (children node)))
 
+(defmethod translate :header
+  [node ancestry styles]
+  (println "Translating header")
+  (map #(translate % (cons node ancestry) styles) (children node)))
+
+
 (defmethod translate :table
   [node ancestry styles])
 
@@ -138,6 +144,12 @@
   [node ancestry styles]
   (println "Translating section")
   (map #(translate % (cons node ancestry) styles) (children node)))
+
+(defmethod translate :b
+  [node ancestry styles]
+  (println "Translating b")
+  [:s:span {:fontWeight "bold"}
+   (html/text node)])
 
 (defmethod translate :span
   [node ancestry styles]

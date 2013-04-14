@@ -17,60 +17,93 @@
   (when-let [classes (:class (:attrs node))]
     (>= (.indexOf (clojure.string/split classes #" ") class) 0)))
 
-(defmulti partial-condition-match? (fn [condition node]
+(defmulti partial-condition-match? (fn [condition node ancestry]
                                      (cond 
-                                        (re-find #"^#.+" condition) ::selector-id
-                                        (re-find #"^[-_a-zA-Z0-9]+\.[-_a-zA-Z0-9]+$" condition) ::selector-classed-tag
-                                        (re-find #"^\.[-_a-zA-Z0-9]+$" condition) ::selector-class
-                                        (re-find #"^[-_a-zA-Z0-9]+$" condition) ::selector-tag)))
+                                      (re-find #"[^:]:(.+)$" condition) ::special-function
+                                      (re-find #"^#.+" condition) ::selector-id
+                                      (re-find #"^[-_a-zA-Z0-9]+\.[-_a-zA-Z0-9]+$" condition) ::selector-classed-tag
+                                      (re-find #"^\.[-_a-zA-Z0-9]+$" condition) ::selector-class
+                                      (re-find #"^[-_a-zA-Z0-9]+$" condition) ::selector-tag)))
+
+(defn selector-function-match?
+  [f n parents]
+  true)
+
+;;this are the selector:nth-of-type kind of selectors
+;;first need to match first side traditionally then check if the function is true
+(defmethod partial-condition-match? ::special-function
+  [condition node ancestry]
+  (when-let [[_ selector function] (re-find #"([^:]):(.+)$" condition)]
+    (when (partial-condition-match? selector node)
+      (selector-function-match? function node ancestry))))
 
 (defmethod partial-condition-match? ::selector-id
-  [condition node]
+  [condition node ancestry]
   (let [id (:id (:attrs node))]
     (= condition (str "#" id))))
 
 (defmethod partial-condition-match? ::selector-class
-  [condition node]
+  [condition node ancestry]
   (when-let [[_ class] (re-find #"^\.([-_a-zA-Z0-9]+)$" condition)] 
     (has-class? node class)))
 
 (defmethod partial-condition-match? ::selector-tag
-  [condition node]
+  [condition node ancestry]
   (= condition (name (:tag node))))
 
 (defmethod partial-condition-match? ::selector-classed-tag
-  [condition node]
+  [condition node ancestry]
   (when-let [[_ tag class] (re-find #"^([-_a-zA-Z0-9]+)\.([-_a-zA-Z0-9]+)$" condition)] 
     (and (= tag (name (:tag node)))
          (has-class? node class))))
 
 (defmethod partial-condition-match? :default
-  [condition node]
+  [condition node ancestry]
   (println (format "Unable to identify css selector '%s'" condition)))
 
 (defn selector-match?
-  "Returns true if the last element of the selector matches the specified node
+  "If the last element of the selector matches the specified node, returns the
+   trimmed selector and ancestry (for the case of the '>' relationship).
    That is the selector [body #id1 ul] matches for the node :ul"
-  [node selector]
+  [node selector ancestry]
   (cond
    (nil? node) false
    (nil? selector) true
    (not (seq selector)) true
-   :else  (partial-condition-match? (last selector) node)))
+   :else  (when (partial-condition-match? (last selector) node ancestry)
+            ;;if theres a strict relationship, validate next parent also matches
+            ;;and trim the selector and the parent
+            (if (= ">" (last (butlast selector)))
+              (when (partial-condition-match? (nth (reverse selector) 2 "") 
+                                              (first ancestry)
+                                              (rest ancestry))
+                {:a (rest ancestry)
+                 :s (drop-last 3 selector)})
+              {:a ancestry
+               :s (drop-last 1 selector)}))))
+
+(defn trim-ancestry
+  ;;drop parents until found one matching the next selector
+  ;;eg. "body div ul.menu" may have bogus nodes in the hierarchy
+  ;;drop-while is not used since access to the rest of the list is needed
+  ;;in each iteration
+  [selector nodes]
+  (loop [ancestry nodes]
+    (when (seq ancestry)
+      (if (selector-match? (first ancestry) selector (rest ancestry))
+        ancestry
+        (recur (rest ancestry))))))
 
 (defn selector-applies?
   "Returns true if the selector applies for the current node"
   [node ancestry selector]
   (loop [n node parents ancestry s selector]
-    (comment (println "recurrring with n " n " parents " parents " selector " s))
     ;;current node matches for last selector tag
-    (when (selector-match? n s)
+    (when-let [{new-selector :s new-parents :a} (selector-match? n s parents)]
       ;;if no more selectors found, this is a WIN
-      (if-let [selector (butlast s)]
-        ;;drop parents until found one matching the next selector
-        ;;eg. "body div ul.menu" may have bogus nodes in the hierarchy
-        (let [ancestry (drop-while #(not (selector-match? % selector)) parents)] 
-          (recur (first ancestry) (rest ancestry) selector))
+      (if (seq new-selector)
+        (let [ancestry (trim-ancestry new-selector new-parents)] 
+          (recur (first ancestry) (rest ancestry) new-selector))
         true))))
 
 (defn style-applies?
