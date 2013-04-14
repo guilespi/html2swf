@@ -32,13 +32,13 @@
                         parent (first parents)
                         abs-idx (:index parent)
                         parent-node (:node parent)
-                        last-childs (drop abs-idx (:content parent-node))]
+                        last-childs (drop abs-idx (filter map? (:content parent-node)))]
                     (empty? (filter #(= (:tag %) tag) last-childs)))
     :first-of-type (let [tag (:tag node)
                          parent (first parents)
                          abs-idx (:index parent)
                          parent-node (:node parent)
-                         first-childs (take (dec abs-idx) (:content parent-node))]
+                         first-childs (take (dec abs-idx) (filter map? (:content parent-node)))]
                      (empty? (filter #(= (:tag %) tag) first-childs)))))
 
 ;;this are the selector:nth-of-type kind of selectors
@@ -128,19 +128,25 @@
   [style]
   (first (filter map? style)))
 
-(def ^:dynamic *inherited-css-attributes* [:font])
+(def ^:dynamic *inherited-css-attributes* [:color :text-align])
+
+(defn- single-node-styles
+  "Retrieve styles for a single node"
+  [node ancestry styles]
+  (reduce #(if (style-applies? node ancestry %2)
+             (merge %1 (get-style-attributes %2))
+             %1) {} styles))
 
 (defn get-inherited-style-attrs
-  "Retrieve for a style only the attributes propagating to the childs"
-  [style]
-  (let [attrs (get-style-attributes style)]
+  "Retrieve for a style only the attributes propagating to the childs.
+   TODO: this should consider also the rest of the parents"
+  [ancestry styles]
+  (let [attrs (single-node-styles (:node (first ancestry)) (rest ancestry) styles)]
     (select-keys attrs *inherited-css-attributes*)))
 
 (defn styles-for-node
   "Creates a hashmap of style attributes for a given node
    assuming styles have all the stylesheets for page combined"
   [node ancestry styles]
-  (reduce #(if (style-applies? node ancestry %2)
-             (merge %1 (get-style-attributes %2))
-             %1) {} styles))
-
+  (merge (get-inherited-style-attrs ancestry styles)
+         (single-node-styles node ancestry styles)))
