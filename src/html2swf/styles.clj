@@ -26,20 +26,18 @@
                                       (re-find #"^[-_a-zA-Z0-9]+$" condition) ::selector-tag)))
 
 (defn selector-function-match?
-  [named-fn node parents]
+  [named-fn selector node parents]
   (case named-fn
-    :last-of-type (let [tag (:tag node)
-                        parent (first parents)
+    :last-of-type (let [parent (first parents)
                         abs-idx (:index parent)
                         parent-node (:node parent)
                         last-childs (drop abs-idx (filter map? (:content parent-node)))]
-                    (empty? (filter #(= (:tag %) tag) last-childs)))
-    :first-of-type (let [tag (:tag node)
-                         parent (first parents)
+                    (empty? (filter #(partial-condition-match? selector % (rest parents)) last-childs)))
+    :first-of-type (let [parent (first parents)
                          abs-idx (:index parent)
                          parent-node (:node parent)
                          first-childs (take (dec abs-idx) (filter map? (:content parent-node)))]
-                     (empty? (filter #(= (:tag %) tag) first-childs)))))
+                     (empty? (filter #(partial-condition-match? selector % (rest parents)) first-childs)))))
 
 ;;this are the selector:nth-of-type kind of selectors
 ;;first need to match first side traditionally then check if the function is true
@@ -47,7 +45,7 @@
   [condition node ancestry]
   (when-let [[_ selector function] (re-find #"([^:]+):(.+)$" condition)]
     (when (partial-condition-match? selector node ancestry)
-      (selector-function-match? (keyword function) node ancestry))))
+      (selector-function-match? (keyword function) selector node ancestry))))
 
 (defmethod partial-condition-match? ::selector-id
   [condition node ancestry]
