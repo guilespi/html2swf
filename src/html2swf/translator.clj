@@ -89,12 +89,15 @@
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)
         text (html/text node)]
-    [:mx:Label {:width "850"
-                :text (inline-trim text)
-                :fontSize (parse-font-size (:font-size attrs))
-                :color (color-as-hex (:color attrs))
-                :fontWeight "bold"
-                :textAlign (:text-align attrs)}]))
+    [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
+                         :borderVisible "false"
+                         :height 50}
+     [:mx:Label {:width "850"
+                 :text (inline-trim text)
+                 :fontSize (parse-font-size (:font-size attrs))
+                 :color (color-as-hex (:color attrs))
+                 :fontWeight "bold"
+                 :textAlign (:text-align attrs)}]]))
 
 (defn translate-header
   "Creates a header with an optional image located on the right or
@@ -114,7 +117,6 @@
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:HBox {:width "100%"
-               :height "50"
                :verticalAlign "middle"
                :backgroundColor (color-as-hex (:background-color attrs))}
      [:mx:Label {:paddingLeft "5"}]
@@ -146,7 +148,8 @@
 (defmethod translate :hgroup
   [node ancestry styles]
   (println "Translating hgroup")
-  (translate-seq node (children node) ancestry styles))
+  [:mx:VBox
+   (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :section
   [node ancestry styles]
