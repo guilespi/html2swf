@@ -231,3 +231,5 @@ html, body, #id {
 ;;(in-ns 'html2swf.parser)
 ;;(def sheets (stylesheets (:html (second user/myf)) "/Users/guilespi/Downloads/HTML5/PVIA/"))
 
+;;(require :reload-all '[html2swf.compiler :as compiler])
+;;(compiler/build-file myf "/Users/guilespi/Downloads/HTML5/PVIA/")
