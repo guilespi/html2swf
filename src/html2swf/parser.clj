@@ -12,12 +12,19 @@
         (map (comp (partial str directory) :href :attrs) 
              (html/select h [[:link (html/attr|= :rel "stylesheet")]]))))
 
+
+(defn- hack-nth-of-type
+  ;;css parser does not support css3 selector nth-of-type as is, tweak it a little bit 
+  [content]
+  (clojure.string/replace content 
+                          #"nth-of-type\(([0-9]+)\)" 
+                          #(str "nth-of-type-" (second %1))))
+
 (defn- parse-stylesheets
   [sheets]
-  (let [contents (map #(dos2unix (debomify (slurp %))) sheets)]
-    (filter seq 
-            (apply concat
-                   (map #(css/parse-css %) contents)))))
+  (let [contents (map #(-> (slurp %) debomify dos2unix hack-nth-of-type) sheets)]
+    (filter seq (apply concat
+                       (map #(css/parse-css %) contents)))))
 
 (defn read-html-files
   "Reads a directory from disk recursively and parses all HTML files.

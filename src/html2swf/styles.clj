@@ -27,17 +27,26 @@
 
 (defn selector-function-match?
   [named-fn selector node parents]
-  (case named-fn
-    :last-of-type (let [parent (first parents)
-                        abs-idx (:index parent)
-                        parent-node (:node parent)
-                        last-childs (drop abs-idx (filter map? (:content parent-node)))]
-                    (empty? (filter #(partial-condition-match? selector % (rest parents)) last-childs)))
-    :first-of-type (let [parent (first parents)
-                         abs-idx (:index parent)
-                         parent-node (:node parent)
-                         first-childs (take (dec abs-idx) (filter map? (:content parent-node)))]
-                     (empty? (filter #(partial-condition-match? selector % (rest parents)) first-childs)))))
+  (cond 
+   (re-find #"nth-of-type" named-fn) (let [[_ nth-val] (re-find #"nth-of-type-([0-9]+)" named-fn)
+                                           parent (first parents)
+                                           abs-idx (:index parent)
+                                           parent-node (:node parent)
+                                           first-childs (take abs-idx (filter map? (:content parent-node)))
+                                           matching-type (filter #(partial-condition-match? selector % (rest parents)) first-childs)]
+                                       (= (Integer. nth-val) (count matching-type)))
+
+   (= named-fn "last-of-type") (let [parent (first parents)
+                                     abs-idx (:index parent)
+                                     parent-node (:node parent)
+                                     last-childs (drop abs-idx (filter map? (:content parent-node)))]
+                                 (empty? (filter #(partial-condition-match? selector % (rest parents)) last-childs)))
+
+   (= named-fn "first-of-type") (let [parent (first parents)
+                                      abs-idx (:index parent)
+                                      parent-node (:node parent)
+                                      first-childs (take (dec abs-idx) (filter map? (:content parent-node)))]
+                                  (empty? (filter #(partial-condition-match? selector % (rest parents)) first-childs)))))
 
 ;;this are the selector:nth-of-type kind of selectors
 ;;first need to match first side traditionally then check if the function is true
@@ -45,7 +54,7 @@
   [condition node ancestry]
   (when-let [[_ selector function] (re-find #"([^:]+):(.+)$" condition)]
     (when (partial-condition-match? selector node ancestry)
-      (selector-function-match? (keyword function) selector node ancestry))))
+      (selector-function-match? function selector node ancestry))))
 
 (defmethod partial-condition-match? ::selector-id
   [condition node ancestry]
@@ -82,7 +91,7 @@
    (not (seq selector)) true
    :else  (when (partial-condition-match? (last selector) node ancestry)
             ;;if theres a strict relationship, validate next parent also matches
-            ;;and trim the selector and the parent
+            ;;and trim the hierarchy selector
             (if (= ">" (last (butlast selector)))
               (when (partial-condition-match? (nth (reverse selector) 2 "") 
                                               (:node (first ancestry))
@@ -126,7 +135,7 @@
   [style]
   (first (filter map? style)))
 
-(def ^:dynamic *inherited-css-attributes* [:color :text-align])
+(def ^:dynamic *inherited-css-attributes* [:color :text-align :background-color])
 
 (defn- single-node-styles
   "Retrieve styles for a single node"
