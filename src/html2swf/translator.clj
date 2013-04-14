@@ -53,7 +53,7 @@
                       :backgroundColor (color-as-hex (:background-color attrs))
                       :width 1024
                       :height 768}
-      (map #(translate % (cons node ancestry) styles) (children node))]))
+     (translate-seq node (children node) ancestry styles)]))
 
 (defmethod translate :article 
   [node ancestry styles]  
@@ -62,10 +62,13 @@
     ;;if has child articles just draw a box, if 
     ;;leaf article draw a grid
     (if (seq (filter #(= (:tag %) :article) (children node)))
-      (let [childs (children node)
-            child-wo-header (filter #(not= (:tag %) :h2) childs)] ;;remove supeflous h2 tags present in nested arts
+      (let [childs (children node)] 
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
-         (translate-seq node child-wo-header ancestry styles)])
+         (map-indexed (fn [idx child] 
+                        ;;remove supeflous h2 tags present in nested arts
+                        (when (not= (:tag child) :h2) 
+                          (translate child (cons {:index (inc idx)
+                                                  :node node} ancestry) styles))) childs)])
       (let [image (extract-image attrs)] 
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                    :borderStyle "solid"
