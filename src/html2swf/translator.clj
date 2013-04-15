@@ -10,14 +10,23 @@
   (-> (clojure.string/replace string #"\s\s+" " ")
       (hutil/escape-html)))
 
-(defn parse-font-size
-  [font-size]
-  (cond 
-   (re-find #"(?i)(\d+)px$" font-size) (second (re-find #"(?i)(\d+)px$" font-size))
-   (re-find #"^[a-zA-Z]$" font-size) font-size
-   (re-find #"(?i)(.+)em$" font-size) (int (/ (Double. (second (re-find #"(?i)(.+)em$" font-size))) 
-                                              (/ 1 16)))
-   :else font-size))
+(defn parse-size
+  [size]
+  (when size
+    (cond 
+     (re-find #"(?i)(\d+)px$" size) (second (re-find #"(?i)(\d+)px$" size))
+     (re-find #"^[a-zA-Z]$" size) size
+     (re-find #"(?i)(.+)em$" size) (int (/ (Double. (second (re-find #"(?i)(.+)em$" size))) 
+                                           (/ 1 16)))
+     :else size)))
+
+(defn parse-border
+  [border]
+  (when border
+    (when-let [[_ size style color] (re-find #"([^ ]+) ([^ ]+) (.+)$" border)]
+      {:size (parse-size size)
+       :style style
+       :color (color-as-hex color)})))
 
 (defn extract-image
   "Read other attributes of the image such as location (right bottom etc"
@@ -65,13 +74,17 @@
   [node ancestry styles]  
   (println "Translating article")
   (let [attrs (styles-for-node node ancestry styles)
-        nested-articles (seq (filter #(= (:tag %) :article) (children node)))] 
-      (let [image (extract-image attrs)] 
-        [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
-                   :borderStyle "solid"
-                   :borderVisible (if nested-articles "false" "true")
-                   :width "100%"}
-         (translate-seq node (children node) ancestry styles)])))
+        nested-articles (seq (filter #(= (:tag %) :article) (children node)))
+        border (parse-border (:border attrs))] 
+      (let [image (extract-image attrs)]
+        [:s:BorderContainer {:borderStyle "solid"
+                             :borderColor (:color border)
+                             :borderVisible (if nested-articles "false" "true")
+                             :borderWeight (:size border)}
+         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
+                    :borderVisible "false"
+                    :width "100%"}
+          (translate-seq node (children node) ancestry styles)]])))
 
 (defn translate-header-image
   "Creates an image cell to be used on an article header"
@@ -94,7 +107,7 @@
                            :height 50}
        [:mx:Label {:width "850"
                    :text text
-                   :fontSize (parse-font-size (:font-size attrs))
+                   :fontSize (parse-size(:font-size attrs))
                    :color (color-as-hex (:color attrs))
                    :fontWeight "bold"
                    :textAlign (:text-align attrs)}]])))
@@ -202,7 +215,7 @@
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
                            :width "850"
-                           :fontSize (parse-font-size (:font-size attrs))
+                           :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))}
       [:s:list 
@@ -234,7 +247,7 @@
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
                            :width "850"
-                           :fontSize (parse-font-size (:font-size attrs))
+                           :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))}
       (translate-seq node childs ancestry styles)]]))
