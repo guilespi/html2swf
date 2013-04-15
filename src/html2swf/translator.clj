@@ -1,9 +1,14 @@
 (ns html2swf.translator
   (:require [html2swf.styles :refer [styles-for-node]]
             [net.cgrand.enlive-html :as html]
-            [hiccup.core :as hiccup])
+            [hiccup.core :as hiccup]
+            [hiccup.util :as hutil])
   (:use [html2swf.utils]))
 
+(defn inline-trim
+  [^String string]
+  (-> (clojure.string/replace string #"\s\s+" " ")
+      (hutil/escape-html)))
 
 (defn parse-font-size
   [font-size]
@@ -20,11 +25,12 @@
   (when-let [background-image (:background-image attrs)]
     ;;FIXME: this extraction is broken only works if images and CSS are in subdirectories
     ;;of the main path, probably to happen, but broken anyway
-    {:path (second (re-find #"url\(\.\./([^)]+)" background-image))
-     :position (if (and (:background-position attrs)
-                        (re-find #"left" (:background-position attrs)))
-                 :left
-                 :right)}))
+    (when-let [[_ image-path] (re-find #"url\(\.\./([^)]+)" background-image)]
+      {:path image-path
+       :position (if (and (:background-position attrs)
+                          (re-find #"left" (:background-position attrs)))
+                   :left
+                   :right)})))
 
 (defn children
   "Shortcut for using Enlive to get all elements beneath an element"
@@ -142,8 +148,8 @@
 
 (defmethod translate :footer
   [node ancestry styles]
-  (let [attrs (styles-for-node node ancestry styles)]
-    (translate-header node attrs)))
+  (println "Translating footer")
+  (translate-header-text node ancestry styles))
 
 (defmethod translate :hgroup
   [node ancestry styles]
@@ -155,6 +161,27 @@
   [node ancestry styles]
   (println "Translating section")
   (translate-seq node (children node) ancestry styles))
+
+(defmethod translate :li
+  [node ancestry styles]
+  (println "Translating li")
+  [:s:li (html/text node)])
+
+(defmethod translate :ul
+  [node ancestry styles]
+  (println "Translating ul")
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:mx:HBox {:width "100%" 
+               :verticalAlign "middle" 
+               :backgroundColor (color-as-hex (:background-color attrs))}
+     [:s:RichEditableText {:editable "false"
+                           :focusEnabled "false"
+                           :width "850"
+                           :fontSize (parse-font-size (:font-size attrs))
+                           :fontWeight (:font-weight attrs)
+                           :color (color-as-hex (:color attrs))}
+      [:s:list 
+       (translate-seq node (children node) ancestry styles)]]]))
 
 (defmethod translate :b
   [node ancestry styles]

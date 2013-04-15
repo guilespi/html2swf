@@ -13,10 +13,6 @@
   [^String content]
   (clojure.string/replace content #"\r" ""))
 
-(defn inline-trim
-  [^String string]
-  (clojure.string/replace string #"\s\s+" " "))
-
 (defn rgb-int-from-components
   "Convert a vector of the 3 rgb integer values into a color given in
   numeric rgb format"
