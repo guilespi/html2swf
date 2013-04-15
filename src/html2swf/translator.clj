@@ -20,7 +20,7 @@
                                            (/ 1 16)))
      :else size)))
 
-(defn parse-border
+(defn create-border
   [border]
   (when border
     (when-let [[_ size style color] (re-find #"([^ ]+) ([^ ]+) (.+)$" border)]
@@ -28,18 +28,37 @@
        :style style
        :color (color-as-hex color)})))
 
+(defn parse-border
+  [attrs]
+  (cond 
+   (:border attrs) (create-border (:border attrs))
+   (:border-bottom attrs) (merge {:sides "bottom"} 
+                                 (create-border (:border-bottom attrs)))
+   (:border-top attrs) (merge {:sides "top"} 
+                              (create-border (:border-top attrs)))))
+
 (defn extract-image
   "Read other attributes of the image such as location (right bottom etc"
   [attrs]
-  (when-let [background-image (:background-image attrs)]
+  (when-let [background-image (or (:background-image attrs) (:background attrs))]
     ;;FIXME: this extraction is broken only works if images and CSS are in subdirectories
     ;;of the main path, probably to happen, but broken anyway
     (when-let [[_ image-path] (re-find #"url\(\.\./([^)]+)" background-image)]
       {:path image-path
        :position (if (and (:background-position attrs)
-                          (re-find #"left" (:background-position attrs)))
-                   :left
-                   :right)})))
+                          (re-find #"right" (:background-position attrs)))
+                   :right
+                   :left)})))
+
+(defn translate-header-image
+  "Creates an image cell to be used on an article header"
+  [image align]
+  (when image
+    [:mx:Image {:width 100
+                :height 50
+                :verticalAlign "middle"
+                :source (format "@Embed(source='%s')" 
+                                (:path image))}]))
 
 (defn children
   "Shortcut for using Enlive to get all elements beneath an element"
@@ -58,6 +77,16 @@
                                            :node parent} ancestry) styles))) 
                childs))
 
+(defn padded-image
+  [image]
+  (when image
+    (let [img (translate-header-image image :any)
+          pad [:mx:Label {:width "740"}]]
+      [:mx:HBox
+       (case (:position image)
+         :left (seq [img pad])
+         :right (seq [pad img]))])))
+
 (defmethod translate :body
   [node ancestry styles]
   (println "Translating body")
@@ -75,25 +104,17 @@
   (println "Translating article")
   (let [attrs (styles-for-node node ancestry styles)
         nested-articles (seq (filter #(= (:tag %) :article) (children node)))
-        border (parse-border (:border attrs))] 
-      (let [image (extract-image attrs)]
-        [:s:BorderContainer {:borderStyle "solid"
-                             :borderColor (:color border)
-                             :borderVisible (if nested-articles "false" "true")
-                             :borderWeight (:size border)}
-         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
-                    :borderVisible "false"
-                    :width "100%"}
-          (translate-seq node (children node) ancestry styles)]])))
-
-(defn translate-header-image
-  "Creates an image cell to be used on an article header"
-  [image align]
-  [:mx:Image {:width 100
-              :height 50
-              :verticalAlign "middle"
-              :source (format "@Embed(source='%s')" 
-                              (:path image))}])
+        border (parse-border attrs)
+        image (extract-image attrs)] 
+    [:s:BorderContainer {:borderStyle "solid"
+                         :borderColor (:color border)
+                         :borderVisible (if nested-articles "false" "true")
+                         :borderWeight (:size border)}
+     [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
+                :borderVisible "false"
+                :width "100%"}
+      (padded-image image)
+      (translate-seq node (children node) ancestry styles)]]))
 
 (defn translate-header-text
   "Creates a text cell to be used on an article header"
@@ -192,13 +213,25 @@
 (defmethod translate :hgroup
   [node ancestry styles]
   (println "Translating hgroup")
-  [:mx:VBox
-   (translate-seq node (children node) ancestry styles)])
+  (let [attrs (styles-for-node node ancestry styles)
+        image (extract-image attrs)]
+    [:mx:VBox
+     (padded-image image)
+     (translate-seq node (children node) ancestry styles)]))
 
 (defmethod translate :section
   [node ancestry styles]
   (println "Translating section")
-  (translate-seq node (children node) ancestry styles))
+  (let [attrs (styles-for-node node ancestry styles)
+        border (parse-border attrs)]
+    [:s:BorderContainer {:borderStyle "solid"
+                         :borderColor (:color border)
+                         :borderVisible (if border "true" "false")
+                         :borderWeight (:size border)}
+     [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
+                :borderVisible "false"
+                :width "100%"}
+      (translate-seq node (children node) ancestry styles)]]))
 
 (defmethod translate :li
   [node ancestry styles]
