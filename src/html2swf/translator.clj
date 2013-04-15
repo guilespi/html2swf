@@ -64,22 +64,14 @@
 (defmethod translate :article 
   [node ancestry styles]  
   (println "Translating article")
-  (let [attrs (styles-for-node node ancestry styles)] 
-    ;;if has child articles just draw a box, if 
-    ;;leaf article draw a grid
-    (if (seq (filter #(= (:tag %) :article) (children node)))
-      (let [childs (children node)] 
-        [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))}
-         (map-indexed (fn [idx child] 
-                        ;;remove supeflous h2 tags present in nested arts
-                        (when (not= (:tag child) :h2) 
-                          (translate child (cons {:index (inc idx)
-                                                  :node node} ancestry) styles))) childs)])
+  (let [attrs (styles-for-node node ancestry styles)
+        nested-articles (seq (filter #(= (:tag %) :article) (children node)))] 
       (let [image (extract-image attrs)] 
         [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                    :borderStyle "solid"
+                   :borderVisible (if nested-articles "false" "true")
                    :width "100%"}
-         (translate-seq node (children node) ancestry styles)]))))
+         (translate-seq node (children node) ancestry styles)])))
 
 (defn translate-header-image
   "Creates an image cell to be used on an article header"
@@ -94,16 +86,18 @@
   "Creates a text cell to be used on an article header"
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)
-        text (html/text node)]
-    [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
-                         :borderVisible "false"
-                         :height 50}
-     [:mx:Label {:width "850"
-                 :text (inline-trim text)
-                 :fontSize (parse-font-size (:font-size attrs))
-                 :color (color-as-hex (:color attrs))
-                 :fontWeight "bold"
-                 :textAlign (:text-align attrs)}]]))
+        text (html/text node)
+        hide (= (:display attrs) "none")]
+    (when (not hide)
+      [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
+                           :borderVisible "false"
+                           :height 50}
+       [:mx:Label {:width "850"
+                   :text text
+                   :fontSize (parse-font-size (:font-size attrs))
+                   :color (color-as-hex (:color attrs))
+                   :fontWeight "bold"
+                   :textAlign (:text-align attrs)}]])))
 
 (defn translate-header
   "Creates a header with an optional image located on the right or
@@ -138,13 +132,44 @@
   (println "Translating h3")
   (translate-header-text node ancestry styles))
 
+(defmethod translate :h4
+  [node ancestry styles]
+  (println "Translating h4")
+  (translate-header-text node ancestry styles))
+
 (defmethod translate :header
   [node ancestry styles]
   (println "Translating header")
   (build-single-row-header node ancestry styles))
 
-(defmethod translate :table
+(defmethod translate :colgroup
   [node ancestry styles])
+
+(defmethod translate :td
+  [node ancestry styles]
+  [:mx:GridItem
+   [:mx:Label {:text (inline-trim (html/text node))}]])
+
+(defmethod translate :th
+  [node ancestry styles]
+  [:mx:GridItem
+   [:mx:Label {:text (inline-trim (html/text node))
+               :fontWeight "bold"}]])
+
+(defmethod translate :tr
+  [node ancestry styles]
+  [:mx:GridRow
+   (translate-seq node (children node) ancestry styles)])
+
+(defmethod translate :tbody
+  [node ancestry styles]
+  [:mx:Grid
+   (translate-seq node (children node) ancestry styles)])
+
+(defmethod translate :table
+  [node ancestry styles]
+  [:mx:VBox
+   (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :footer
   [node ancestry styles]
