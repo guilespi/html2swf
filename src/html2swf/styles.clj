@@ -145,11 +145,14 @@
              %1) {} styles))
 
 (defn get-inherited-style-attrs
-  "Retrieve for a style only the attributes propagating to the childs.
-   TODO: this should consider also the rest of the parents"
+  "Retrieve for a style only the attributes propagating to the childs."
   [ancestry styles]
-  (let [attrs (single-node-styles (:node (first ancestry)) (rest ancestry) styles)]
-    (select-keys attrs *inherited-css-attributes*)))
+  (loop [nodes ancestry attrs {}]
+    (if (seq nodes)
+      (let [node-attrs (single-node-styles (:node (first nodes)) (rest nodes) styles)
+            inh-attrs (select-keys node-attrs *inherited-css-attributes*)]
+        (recur (rest nodes) (merge attrs inh-attrs)))
+      attrs)))
 
 (defn styles-for-node
   "Creates a hashmap of style attributes for a given node
