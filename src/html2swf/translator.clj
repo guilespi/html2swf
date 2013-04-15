@@ -87,17 +87,27 @@
          :left (seq [img pad])
          :right (seq [pad img]))])))
 
-(defmethod translate :body
+(defmethod translate :html
   [node ancestry styles]
-  (println "Translating body")
-  (let [attrs (styles-for-node node ancestry styles)]
+  (println "Translating html")
+  (let [attrs (styles-for-node node ancestry styles)
+        props (:attrs node)
+        ;;assume only one body always present
+        body (first (html/select node [:body]))]
     [:mx:Application {:xmlns:mx "library://ns.adobe.com/flex/mx"
                       :xmlns:fx "http://ns.adobe.com/mxml/2009" 
                       :xmlns:s "library://ns.adobe.com/flex/spark" 
                       :backgroundColor (color-as-hex (:background-color attrs))
+                      :layoutDirection (:dir props)
+                      :direction (:dir props)
                       :width 1024
                       :height 768}
-     (translate-seq node (children node) ancestry styles)]))
+     (translate-seq body (children body) ancestry styles)]))
+
+(defmethod translate :body
+  [node ancestry styles]
+  (println "Translating body")
+  (translate-seq node (children node) ancestry styles))
 
 (defmethod translate :article 
   [node ancestry styles]  
@@ -195,14 +205,17 @@
   [:mx:GridRow
    (translate-seq node (children node) ancestry styles)])
 
+(defmethod translate :thead
+  [node ancestry styles]
+  (translate-seq node (children node) ancestry styles))
+
 (defmethod translate :tbody
   [node ancestry styles]
-  [:mx:Grid
-   (translate-seq node (children node) ancestry styles)])
+  (translate-seq node (children node) ancestry styles))
 
 (defmethod translate :table
   [node ancestry styles]
-  [:mx:VBox
+  [:mx:Grid
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :footer
@@ -288,7 +301,6 @@
 (defn translate-page 
   [html-content styles]
   (let [html-node (first (html/select html-content [:html]))
-        ;;assume only one body always present
-        body (first (html/select html-node [:body]))
-        markup (translate body [{:index 1 :node html-node}] styles)]
+        attrs (:attrs html-node)
+        markup (translate html-node [] styles)]
     (hiccup/html markup)))
