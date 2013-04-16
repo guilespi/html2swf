@@ -26,6 +26,10 @@
     (filter seq (apply concat
                        (map #(css/parse-css %) contents)))))
 
+(defn- is-html?
+  [file]
+  (re-matches #".+\.html$" (.getName file)))
+
 (defn read-html-files
   "Reads a directory from disk recursively and parses all HTML files.
 
@@ -35,13 +39,19 @@
   "
   [directory]
   (let [files (file-seq (clojure.java.io/file directory))
-        html-files (filter #(re-matches #".+\.html$" (.getName %)) files)]
+        html-files (filter is-html? files)]
     (reduce
       (fn [h f] 
         (let [full-path (.getPath f)
               relative-path (clojure.string/replace full-path directory "")]
           (assoc h full-path {:html (html/html-resource (clojure.java.io/file full-path))
                               :relative-path relative-path}))) {} html-files)))
+
+(defn read-html-file
+  [filepath]
+  (let [file (clojure.java.io/file filepath)]
+    (when (is-html? file)
+      {:html (html/html-resource file)})))
 
 (defn styles-for-page
   [html-content base-directory]

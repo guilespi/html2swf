@@ -140,7 +140,8 @@
     (when (not hide)
       [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
                            :borderVisible "false"
-                           :height (int (* *swf-height* 0.0651))}
+                           :height (int (* *swf-height* 0.0651))
+                           :width "100%"}
        [:mx:Label {:width (int (* *swf-width* 0.83))
                    :text text
                    :fontSize (parse-size (:font-size attrs))
