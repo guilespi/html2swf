@@ -4,12 +4,12 @@
             [clj-css.core :as css])
   (:use [html2swf.utils]))
 
-(def ^:dynamic *default-stylesheet* "resources/css/default.css")
+(def ^:dynamic *default-stylesheet* "css/default.css")
 
 (defn- stylesheets
   [h directory]
-  (cons *default-stylesheet*
-        (map (comp (partial str directory) :href :attrs) 
+  (cons (clojure.java.io/resource *default-stylesheet*)
+        (map (comp (partial str directory) :href :attrs)
              (html/select h [[:link (html/attr|= :rel "stylesheet")]]))))
 
 
