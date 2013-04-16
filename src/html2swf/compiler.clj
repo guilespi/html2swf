@@ -27,9 +27,9 @@
         html-content (:html (second htmlfile))
         styles (parser/styles-for-page html-content base-directory)
         object-content (translator/translate-page html-content styles width height)
-        base-name (clojure.string/replace filename #".html" "")
-        escaped-name (clojure.string/replace base-name #"[-\.]" "")]
-    (compile-source escaped-name object-content)))
+        [_ component-name] (re-find #"[/\\]([^/\\]+)\.html$" filename)
+        escaped-name (clojure.string/replace component-name #"[-\.]" "")]
+    (compile-source (str base-directory escaped-name) object-content)))
 
 (defn build-directory
   "Convert a complete directory of html files to swf ones"
