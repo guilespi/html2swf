@@ -57,9 +57,10 @@
   "Creates an image cell to be used on an article header"
   [image align]
   (when image
-    [:mx:Image {:width (int (* *swf-width* 0.0976))
-                :height (int (* *swf-height* 0.0651))
+    [:mx:Image {:width (or (:width image) (int (* *swf-width* 0.0976)))
+                :height (or (:height image) (int (* *swf-height* 0.0651)))
                 :verticalAlign "middle"
+                :horizontalAlign (:align image)
                 :source (format "@Embed(source='%s')" 
                                 (:path image))}]))
 
@@ -122,7 +123,8 @@
     [:s:BorderContainer {:borderStyle "solid"
                          :borderColor (:color border)
                          :borderVisible (if nested-articles "false" "true")
-                         :borderWeight (:size border)}
+                         :borderWeight (:size border)
+                         :width "100%"}
      [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                 :borderVisible "false"
                 :width "100%"}
@@ -192,13 +194,34 @@
 (defmethod translate :colgroup
   [node ancestry styles])
 
+(defmethod translate :img
+  [node ancestry styles]
+  (let [attrs (styles-for-node node ancestry styles)
+        props (:attrs node)
+        image {:path (:src props)
+               :width (:width props)
+               :height (:height props)
+               :align (:text-align attrs)}]
+    (translate-header-image image :any)))
+
+(defn translate-text-seq
+  [node ancestry styles]
+  (let [attrs (styles-for-node node ancestry styles)] 
+    (map-indexed (fn [idx child] 
+                   (if (string? child)
+                     [:mx:Label {:text (inline-trim (html/text node))
+                                 :fontSize (parse-size (:font-size attrs))
+                                 :textAlign (:text-algin attrs)}]
+                     (translate child (cons {:index (inc idx)
+                                             :node node} ancestry) styles))) (:content node))))
+
 (defmethod translate :td
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
-                   :color (color-as-hex (:color attrs))}
-     [:mx:Label {:text (inline-trim (html/text node))
-                 :fontSize (parse-size (:font-size attrs))}]]))
+                   :color (color-as-hex (:color attrs))
+                   :width "100%"}
+     (translate-text-seq node ancestry styles)]))
 
 (defmethod translate :th
   [node ancestry styles]
@@ -211,7 +234,8 @@
 
 (defmethod translate :tr
   [node ancestry styles]
-  [:mx:GridRow {:borderStyle "solid"}
+  [:mx:GridRow {:borderStyle "solid"
+                :width "100%"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :thead
@@ -224,7 +248,10 @@
 
 (defmethod translate :table
   [node ancestry styles]
-  [:mx:Grid {:horizontalGap "2" :verticalGap "0" :borderStyle "solid"}
+  [:mx:Grid {:horizontalGap "2" 
+             :verticalGap "0" 
+             :borderStyle "solid"
+             :width "100%"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :footer
@@ -260,21 +287,33 @@
   (println "Translating li")
   [:s:li (html/text node)])
 
+(defn translate-list
+  [node ancestry styles list-type]
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:s:HGroup {:width "100%" 
+                :verticalAlign "middle"}
+     [:s:RichEditableText {:editable "false"
+                           :focusEnabled "false"
+                           :width "100%"
+                           :height "100%"
+                           :backgroundColor (color-as-hex (:background-color attrs))
+                           :fontSize (parse-size (:font-size attrs))
+                           :fontWeight (:font-weight attrs)
+                           :multiline "true"
+                           :lineBreak "toFit"
+                           :color (color-as-hex (:color attrs))}
+      [:s:list {:listStyleType list-type}
+       (translate-seq node (children node) ancestry styles)]]]))
+
 (defmethod translate :ul
   [node ancestry styles]
   (println "Translating ul")
-  (let [attrs (styles-for-node node ancestry styles)]
-    [:mx:HBox {:width "100%" 
-               :verticalAlign "middle" 
-               :backgroundColor (color-as-hex (:background-color attrs))}
-     [:s:RichEditableText {:editable "false"
-                           :focusEnabled "false"
-                           :width (int (* *swf-width* 0.83))
-                           :fontSize (parse-size (:font-size attrs))
-                           :fontWeight (:font-weight attrs)
-                           :color (color-as-hex (:color attrs))}
-      [:s:list 
-       (translate-seq node (children node) ancestry styles)]]]))
+  (translate-list node ancestry styles nil))
+
+(defmethod translate :ol
+  [node ancestry styles]
+  (println "Translating ol")
+  (translate-list node ancestry styles "decimal"))
 
 (defmethod translate :b
   [node ancestry styles]
@@ -309,9 +348,9 @@
 
 (defn translate-page 
   [html-content styles width height]
-  (let [html-node (first (html/select html-content [:html]))
-        attrs (:attrs html-node)
-        markup (translate html-node [] styles)]
-    (binding [*swf-width* width
-              *swf-height* height] 
+  (binding [*swf-width* width
+            *swf-height* height] 
+    (let [html-node (first (html/select html-content [:html]))
+          attrs (:attrs html-node)
+          markup (translate html-node [] styles)]
       (hiccup/html markup))))
