@@ -138,7 +138,7 @@
                            :height 50}
        [:mx:Label {:width "850"
                    :text text
-                   :fontSize (parse-size(:font-size attrs))
+                   :fontSize (parse-size (:font-size attrs))
                    :color (color-as-hex (:color attrs))
                    :fontWeight "bold"
                    :textAlign (:text-align attrs)}]])))
@@ -191,18 +191,24 @@
 
 (defmethod translate :td
   [node ancestry styles]
-  [:mx:GridItem
-   [:mx:Label {:text (inline-trim (html/text node))}]])
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
+                   :color (color-as-hex (:color attrs))}
+     [:mx:Label {:text (inline-trim (html/text node))
+                 :fontSize (parse-size (:font-size attrs))}]]))
 
 (defmethod translate :th
   [node ancestry styles]
-  [:mx:GridItem
-   [:mx:Label {:text (inline-trim (html/text node))
-               :fontWeight "bold"}]])
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
+                   :color (color-as-hex (:color attrs))}
+     [:mx:Label {:text (inline-trim (html/text node))
+                 :fontWeight "bold"
+                 :fontSize (parse-size (:font-size attrs))}]]))
 
 (defmethod translate :tr
   [node ancestry styles]
-  [:mx:GridRow
+  [:mx:GridRow {:borderStyle "solid"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :thead
@@ -215,7 +221,7 @@
 
 (defmethod translate :table
   [node ancestry styles]
-  [:mx:Grid
+  [:mx:Grid {:horizontalGap "2" :verticalGap "0" :borderStyle "solid"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :footer
