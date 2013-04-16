@@ -42,5 +42,5 @@
   [filepath width height]
   (println "Building file" filepath)
   (when-let [html-file (parser/read-html-file filepath)]
-    (let [[_ base-directory] (re-find #"(.+/)[^/]+$" filepath)]
+    (let [[_ base-directory] (re-find #"(.+[/\\])[^/\\]+$" filepath)]
       (compile-file [filepath html-file] base-directory width height))))
