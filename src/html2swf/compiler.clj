@@ -21,19 +21,19 @@
 (defn build-file
   "Build one html file to swf using base-directory 
    as root for css and image search"
-  [htmlfile base-directory]
+  [htmlfile base-directory width height]
   (let [filename (first htmlfile)
         _ (println "Building file " filename)
         html-content (:html (second htmlfile))
         styles (parser/styles-for-page html-content base-directory)
-        object-content (translator/translate-page html-content styles)
+        object-content (translator/translate-page html-content styles width height)
         base-name (clojure.string/replace filename #".html" "")
-        escaped-name (clojure.string/replace base-name #"\." "")]
+        escaped-name (clojure.string/replace base-name #"[-\.]" "")]
     (compile-source escaped-name object-content)))
 
 (defn build-directory
   "Convert a complete directory of html files to swf ones"
-  [base-directory]
+  [base-directory width height]
   (println "Building directory" base-directory)
   (let [files (parser/read-html-files base-directory)]
-    (doall (map #(build-file % base-directory) files))))
+    (doall (map #(build-file % base-directory width height) files))))

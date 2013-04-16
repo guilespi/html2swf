@@ -5,6 +5,9 @@
             [hiccup.util :as hutil])
   (:use [html2swf.utils]))
 
+(def ^:dynamic *swf-width* 1024)
+(def ^:dynamic *swf-height* 768)
+
 (defn inline-trim
   [^String string]
   (-> (clojure.string/replace string #"\s\s+" " ")
@@ -54,8 +57,8 @@
   "Creates an image cell to be used on an article header"
   [image align]
   (when image
-    [:mx:Image {:width 100
-                :height 50
+    [:mx:Image {:width (int (* *swf-width* 0.0976))
+                :height (int (* *swf-height* 0.0651))
                 :verticalAlign "middle"
                 :source (format "@Embed(source='%s')" 
                                 (:path image))}]))
@@ -81,7 +84,7 @@
   [image]
   (when image
     (let [img (translate-header-image image :any)
-          pad [:mx:Label {:width "740"}]]
+          pad [:mx:Label {:width (int (* *swf-width* 0.72))}]]
       [:mx:HBox
        (case (:position image)
          :left (seq [img pad])
@@ -100,8 +103,8 @@
                       :backgroundColor (color-as-hex (:background-color attrs))
                       :layoutDirection (:dir props)
                       :direction (:dir props)
-                      :width 1024
-                      :height 768}
+                      :width *swf-width*
+                      :height *swf-height*}
      (translate-seq body (children body) ancestry styles)]))
 
 (defmethod translate :body
@@ -135,8 +138,8 @@
     (when (not hide)
       [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
                            :borderVisible "false"
-                           :height 50}
-       [:mx:Label {:width "850"
+                           :height (int (* *swf-height* 0.0651))}
+       [:mx:Label {:width (int (* *swf-width* 0.83))
                    :text text
                    :fontSize (parse-size (:font-size attrs))
                    :color (color-as-hex (:color attrs))
@@ -266,7 +269,7 @@
                :backgroundColor (color-as-hex (:background-color attrs))}
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
-                           :width "850"
+                           :width (int (* *swf-width* 0.83))
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))}
@@ -298,15 +301,17 @@
      [:mx:Label {:paddingLeft "5"}]
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
-                           :width "850"
+                           :width (int (* *swf-width* 0.83))
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))}
       (translate-seq node childs ancestry styles)]]))
 
 (defn translate-page 
-  [html-content styles]
+  [html-content styles width height]
   (let [html-node (first (html/select html-content [:html]))
         attrs (:attrs html-node)
         markup (translate html-node [] styles)]
-    (hiccup/html markup)))
+    (binding [*swf-width* width
+              *swf-height* height] 
+      (hiccup/html markup))))

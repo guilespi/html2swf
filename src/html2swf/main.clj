@@ -19,8 +19,12 @@
   "Application entry point, should receive the directory to compile"
   [& args]
   (let [[options args banner] (cli args
-                     ["-d" "--directory" "Directory where files to be built are located" :default "."])]
-    (let [result (compiler/build-directory (:directory options))]
+                                   ["-d" "--directory" "Directory where files to be built are located" :default "."]
+                                   ["-w" "--width" "Width of the swf to be compiled" :default 1024]
+                                   ["-h" "--height" "Height of the swf to be compiled" :default 768])]
+    (let [result (compiler/build-directory (:directory options) 
+                                           (Integer. (:width options)) 
+                                           (Integer. (:height options)))]
       (println (format "Compiled %s files %s success %s failed"
                        (count result)
                        (count (filter true? result))
