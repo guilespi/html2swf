@@ -224,14 +224,16 @@
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
                    :color (color-as-hex (:color attrs))
-                   :percentWidth "100"}
+                   :percentWidth "100"
+                   :horizontalAlign (:text-align attrs)}
      (translate-text-seq node ancestry styles)]))
 
 (defmethod translate :th
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
-                   :color (color-as-hex (:color attrs))}
+                   :color (color-as-hex (:color attrs))
+                   :horizontalAlign (:text-align attrs)}
      [:mx:Label {:text (inline-trim (html/text node))
                  :fontWeight "bold"
                  :fontSize (parse-size (:font-size attrs))}]]))
