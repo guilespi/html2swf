@@ -26,7 +26,7 @@
         _ (println "Compile file " filename)
         html-content (:html (second htmlfile))
         styles (parser/styles-for-page html-content base-directory)
-        object-content (translator/translate-page html-content styles width height)
+        object-content (translator/translate-page html-content styles width height base-directory)
         [_ component-name] (re-find #"[/\\]([^/\\]+)\.html$" filename)
         escaped-name (clojure.string/replace component-name #"[-\.]" "")]
     (compile-source (str base-directory escaped-name) object-content)))

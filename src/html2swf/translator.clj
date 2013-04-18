@@ -2,11 +2,13 @@
   (:require [html2swf.styles :refer [styles-for-node]]
             [net.cgrand.enlive-html :as html]
             [hiccup.core :as hiccup]
-            [hiccup.util :as hutil])
+            [hiccup.util :as hutil]
+            [clojure.java.io :as io])
   (:use [html2swf.utils]))
 
 (def ^:dynamic *swf-width* 1024)
 (def ^:dynamic *swf-height* 768)
+(def ^:dynamic *base-directory* nil)
 
 (defn inline-trim
   [^String string]
@@ -53,17 +55,37 @@
                    :right
                    :left)})))
 
-(defn translate-header-image
+(def ^:dynamic *inline-block* false)
+
+(defn translate-inline-image
+  [image align]
+  (let [align (or (:align image) align)]
+    (when (and image (.exists (io/file (str *base-directory* (:path image)))))
+      [:s:img {:percentWidth (when (not (:width image)) "20")
+               :width (:width image)
+               :height (or (:height image) (int (* *swf-height* 0.0651)))
+               :verticalAlign "middle"
+               :float (when (contains? #{"left" "right"} align) align)
+               :source (format "@Embed(source='%s')" 
+                               (:path image))}])))
+
+(defn translate-block-image
   "Creates an image cell to be used on an article header"
   [image align]
-  (when image
+  (when (and image (.exists (io/file (str *base-directory* (:path image)))))
     [:mx:Image {:percentWidth (when (not (:width image)) "20")
-                :width (:width image)
-                :height (or (:height image) (int (* *swf-height* 0.0651)))
-                :verticalAlign "middle"
-                :horizontalAlign (or (:align image) align)
-                :source (format "@Embed(source='%s')" 
-                                (:path image))}]))
+               :width (:width image)
+               :height (or (:height image) (int (* *swf-height* 0.0651)))
+               :verticalAlign "middle"
+               :horizontalAlign (or (:align image) align)
+               :source (format "@Embed(source='%s')" 
+                               (:path image))}]))
+
+(defn translate-image 
+  [image align]
+  (if *inline-block*
+    (translate-inline-image image align)
+    (translate-block-image image align)))
 
 (defn children
   "Shortcut for using Enlive to get all elements beneath an element"
@@ -85,7 +107,7 @@
 (defn padded-image
   [image]
   (when image
-    (let [img (translate-header-image image (:position image))
+    (let [img (translate-block-image image (:position image))
           pad [:mx:Label {:percentWidth "80"}]]
       [:mx:HBox {:percentWidth "100"}
        (case (:position image)
@@ -160,8 +182,8 @@
   (if-let [image (extract-image attrs)]
     (if (= :right (:position image))
       (seq [(translate-seq node (children node) ancestry styles)
-            (translate-header-image image :right)])
-      (seq [(translate-header-image image :left)
+            (translate-block-image image :right)])
+      (seq [(translate-block-image image :left)
             (translate-seq node (children node) ancestry styles)]))
     (translate-seq node (children node) ancestry styles)))
 
@@ -206,7 +228,7 @@
                :width (:width props)
                :height (:height props)
                :align (:text-align attrs)}]
-    (translate-header-image image nil)))
+    (translate-image image nil)))
 
 (defn translate-text-seq
   [node ancestry styles]
@@ -232,8 +254,7 @@
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
-                   :color (color-as-hex (:color attrs))
-                   :horizontalAlign (:text-align attrs)}
+                   :color (color-as-hex (:color attrs))}
      [:mx:Label {:text (inline-trim (html/text node))
                  :fontWeight "bold"
                  :fontSize (parse-size (:font-size attrs))}]]))
@@ -292,7 +313,9 @@
 (defmethod translate :li
   [node ancestry styles]
   (println "Translating li")
-  [:s:li (html/text node)])
+  (binding [*inline-block* true]
+    [:s:li (doall ;;never lazy evaluate outside bindings
+            (translate-text-seq node ancestry styles))]))
 
 (defn translate-list
   [node ancestry styles list-type]
@@ -355,9 +378,10 @@
       (translate-seq node childs ancestry styles)]]))
 
 (defn translate-page 
-  [html-content styles width height]
+  [html-content styles width height base-directory]
   (binding [*swf-width* width
-            *swf-height* height] 
+            *swf-height* height
+            *base-directory* base-directory] 
     (let [html-node (first (html/select html-content [:html]))
           attrs (:attrs html-node)
           markup (translate html-node [] styles)]
