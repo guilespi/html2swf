@@ -57,10 +57,11 @@
   "Creates an image cell to be used on an article header"
   [image align]
   (when image
-    [:mx:Image {:width (or (:width image) (int (* *swf-width* 0.0976)))
+    [:mx:Image {:percentWidth (when (not (:width image)) "20")
+                :width (:width image)
                 :height (or (:height image) (int (* *swf-height* 0.0651)))
                 :verticalAlign "middle"
-                :horizontalAlign (:align image)
+                :horizontalAlign (or (:align image) align)
                 :source (format "@Embed(source='%s')" 
                                 (:path image))}]))
 
@@ -84,9 +85,9 @@
 (defn padded-image
   [image]
   (when image
-    (let [img (translate-header-image image :any)
-          pad [:mx:Label {:width (int (* *swf-width* 0.72))}]]
-      [:mx:HBox
+    (let [img (translate-header-image image (:position image))
+          pad [:mx:Label {:percentWidth "80"}]]
+      [:mx:HBox {:percentWidth "100"}
        (case (:position image)
          :left (seq [img pad])
          :right (seq [pad img]))])))
@@ -104,8 +105,10 @@
                       :backgroundColor (color-as-hex (:background-color attrs))
                       :layoutDirection (:dir props)
                       :direction (:dir props)
-                      :width *swf-width*
-                      :height *swf-height*}
+                      :height "100%"
+                      :width "100%"
+                      :minWidth *swf-width*
+                      :minHeight *swf-height*}
      (translate-seq body (children body) ancestry styles)]))
 
 (defmethod translate :body
@@ -124,10 +127,10 @@
                          :borderColor (:color border)
                          :borderVisible (if nested-articles "false" "true")
                          :borderWeight (:size border)
-                         :width "100%"}
+                         :percentWidth "100"}
      [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                 :borderVisible "false"
-                :width "100%"}
+                :percentWidth "100"}
       (padded-image image)
       (translate-seq node (children node) ancestry styles)]]))
 
@@ -141,8 +144,8 @@
       [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
                            :borderVisible "false"
                            :height (int (* *swf-height* 0.0651))
-                           :width "100%"}
-       [:mx:Label {:width (int (* *swf-width* 0.83))
+                           :percentWidth "100"}
+       [:mx:Label {:percentWidth "100"
                    :text text
                    :fontSize (parse-size (:font-size attrs))
                    :color (color-as-hex (:color attrs))
@@ -166,10 +169,10 @@
   "Creates a header row using a single row-single header"
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
-    [:mx:HBox {:width "100%"
+    [:mx:HBox {:percentWidth "100"
                :verticalAlign "middle"
                :backgroundColor (color-as-hex (:background-color attrs))}
-     [:mx:Label {:paddingLeft "5"}]
+     [:mx:Label {:percentWidth "3"}]
      (translate-header node attrs ancestry styles)]))
 
 (defmethod translate :h2
@@ -203,7 +206,7 @@
                :width (:width props)
                :height (:height props)
                :align (:text-align attrs)}]
-    (translate-header-image image :any)))
+    (translate-header-image image nil)))
 
 (defn translate-text-seq
   [node ancestry styles]
@@ -221,7 +224,7 @@
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
                    :color (color-as-hex (:color attrs))
-                   :width "100%"}
+                   :percentWidth "100"}
      (translate-text-seq node ancestry styles)]))
 
 (defmethod translate :th
@@ -236,7 +239,7 @@
 (defmethod translate :tr
   [node ancestry styles]
   [:mx:GridRow {:borderStyle "solid"
-                :width "100%"}
+                :percentWidth "100"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :thead
@@ -252,7 +255,7 @@
   [:mx:Grid {:horizontalGap "2" 
              :verticalGap "0" 
              :borderStyle "solid"
-             :width "100%"}
+             :percentWidth "100"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :footer
@@ -265,7 +268,7 @@
   (println "Translating hgroup")
   (let [attrs (styles-for-node node ancestry styles)
         image (extract-image attrs)]
-    [:mx:VBox
+    [:mx:VBox {:percentWidth "94"} ;;needs to consider margin
      (padded-image image)
      (translate-seq node (children node) ancestry styles)]))
 
@@ -277,10 +280,11 @@
     [:s:BorderContainer {:borderStyle "solid"
                          :borderColor (:color border)
                          :borderVisible (if border "true" "false")
-                         :borderWeight (:size border)}
+                         :borderWeight (:size border)
+                         :percentWidth "100"}
      [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                 :borderVisible "false"
-                :width "100%"}
+                :percentWidth "100"}
       (translate-seq node (children node) ancestry styles)]]))
 
 (defmethod translate :li
@@ -295,8 +299,7 @@
                 :verticalAlign "middle"}
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
-                           :width "100%"
-                           :height "100%"
+                           :percentWidth "94"
                            :backgroundColor (color-as-hex (:background-color attrs))
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
@@ -334,19 +337,19 @@
 
 (defmethod translate :p
   [node ancestry styles]
-  (println "Translating p with index" (:index (first ancestry)))
+  (println "Translating p")
   (let [attrs (styles-for-node node ancestry styles)
         childs (:content node)]
-    [:mx:HBox {:width "100%" 
-               :verticalAlign "middle" 
-               :backgroundColor (color-as-hex (:background-color attrs))}
-     [:mx:Label {:paddingLeft "5"}]
+    [:s:HGroup {:percentWidth "100" 
+                :verticalAlign "middle"}
+     [:mx:Label {:percentWidth "3"}]
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
-                           :width (int (* *swf-width* 0.83))
+                           :percentWidth "94"
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
-                           :color (color-as-hex (:color attrs))}
+                           :color (color-as-hex (:color attrs))
+                           :backgroundColor (color-as-hex (:background-color attrs))}
       (translate-seq node childs ancestry styles)]]))
 
 (defn translate-page 
