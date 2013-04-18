@@ -319,8 +319,10 @@
 (defmethod translate :b
   [node ancestry styles]
   (println "Translating b")
-  [:s:span {:fontWeight "bold"}
-   (html/text node)])
+  (let [attrs (styles-for-node node ancestry styles)]
+    [:s:span {:fontWeight (or (:font-weight attrs) "bold")
+              :textDecoration (or (:text-decoration attrs) "none")}
+     (html/text node)]))
 
 (defmethod translate :span
   [node ancestry styles]
