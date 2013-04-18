@@ -42,6 +42,10 @@
    (:border-top attrs) (merge {:sides "top"} 
                               (create-border (:border-top attrs)))))
 
+(defn parse-font-family
+  [font-family]
+  font-family)
+
 (defn extract-image
   "Read other attributes of the image such as location (right bottom etc"
   [attrs]
@@ -131,7 +135,7 @@
                       :width "100%"
                       :minWidth *swf-width*
                       :minHeight *swf-height*}
-     (translate-seq body (children body) ancestry styles)]))
+     (translate-seq body (children body) [{:node node :index 1}] styles)]))
 
 (defmethod translate :body
   [node ancestry styles]
@@ -169,6 +173,7 @@
                            :percentWidth "100"}
        [:mx:Label {:percentWidth "100"
                    :text text
+                   :fontFamily (parse-font-family (:font-family attrs))
                    :fontSize (parse-size (:font-size attrs))
                    :color (color-as-hex (:color attrs))
                    :fontWeight "bold"
@@ -235,9 +240,13 @@
   (let [attrs (styles-for-node node ancestry styles)] 
     (map-indexed (fn [idx child] 
                    (if (string? child)
-                     [:mx:Label {:text (inline-trim (html/text node))
-                                 :fontSize (parse-size (:font-size attrs))
-                                 :textAlign (:text-algin attrs)}]
+                     (if *inline-block*
+                       [:s:p {:align (:text-align attrs)} 
+                        child]
+                       [:mx:Label {:text (inline-trim (html/text node))
+                                   :fontSize (parse-size (:font-size attrs))
+                                   :fontFamily (parse-font-family (:font-family attrs))
+                                   :textAlign (:text-align attrs)}])
                      (translate child (cons {:index (inc idx)
                                              :node node} ancestry) styles))) (:content node))))
 
@@ -257,6 +266,7 @@
                    :color (color-as-hex (:color attrs))}
      [:mx:Label {:text (inline-trim (html/text node))
                  :fontWeight "bold"
+                 :fontFamily (parse-font-family (:font-family attrs))
                  :fontSize (parse-size (:font-size attrs))}]]))
 
 (defmethod translate :tr
@@ -327,6 +337,7 @@
                            :percentWidth "94"
                            :backgroundColor (color-as-hex (:background-color attrs))
                            :fontSize (parse-size (:font-size attrs))
+                           :fontFamily (parse-font-family (:font-family attrs))
                            :fontWeight (:font-weight attrs)
                            :multiline "true"
                            :lineBreak "toFit"
@@ -349,6 +360,7 @@
   (println "Translating b")
   (let [attrs (styles-for-node node ancestry styles)]
     [:s:span {:fontWeight (or (:font-weight attrs) "bold")
+              :fontFamily (parse-font-family (:font-family attrs))
               :textDecoration (or (:text-decoration attrs) "none")}
      (html/text node)]))
 
@@ -357,6 +369,7 @@
   (println "Translating span")
   (let [attrs (styles-for-node node ancestry styles)]
     [:s:span {:textDecoration (or (:text-decoration attrs) "none")
+              :fontFamily (parse-font-family (:font-family attrs))
               :backgroundColor (color-as-hex (:background-color attrs))}
      (html/text node)]))
 
@@ -371,6 +384,7 @@
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
                            :percentWidth "94"
+                           :fontFamily (parse-font-family (:font-family attrs))
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))

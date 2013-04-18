@@ -135,7 +135,10 @@
   [style]
   (first (filter map? style)))
 
-(def ^:dynamic *inherited-css-attributes* [:color :text-align :background-color])
+(def ^:dynamic *inherited-css-attributes* [:color
+                                           :text-align 
+                                           :background-color
+                                           :font-family])
 
 (defn- single-node-styles
   "Retrieve styles for a single node"
