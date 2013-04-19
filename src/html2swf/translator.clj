@@ -392,10 +392,12 @@
   [node ancestry styles]
   (println "Translating span")
   (let [attrs (styles-for-node node ancestry styles)]
-    [:s:span {:textDecoration (or (:text-decoration attrs) "none")
-              :fontFamily (parse-font-family (:font-family attrs))
-              :backgroundColor (color-as-hex (:background-color attrs))}
-     (html/text node)]))
+    (if *inline-block*
+      [:s:span {:textDecoration (or (:text-decoration attrs) "none")
+                :fontFamily (parse-font-family (:font-family attrs))
+                :backgroundColor (color-as-hex (:background-color attrs))}
+       (html/text node)]
+      (translate-header-text node ancestry styles))))
 
 (defmethod translate :p
   [node ancestry styles]
@@ -413,7 +415,8 @@
                            :fontWeight (:font-weight attrs)
                            :color (color-as-hex (:color attrs))
                            :backgroundColor (color-as-hex (:background-color attrs))}
-      (translate-seq node childs ancestry styles)]]))
+      (binding [*inline-block* true] 
+        (translate-seq node childs ancestry styles))]]))
 
 (defn translate-page 
   [html-content styles width height base-directory]
