@@ -61,29 +61,53 @@
 
 (def ^:dynamic *inline-block* false)
 
+(defn normalize-image
+  [image]
+  (let [original-file (io/file (str *base-directory* (:path image)))
+        svg-content (slurp original-file)
+        normalized (-> svg-content
+                       ;;remove viewboxes starting at 0,0
+                       (clojure.string/replace #"viewBox=\"0\s0[^\"]+\"" "")
+                       ;;fix invalid paths ending in kz
+                       (clojure.string/replace #"(?i)(path d=\"[^k]+)kz" #(str (get %1 1) "Z")))
+        [_ relative-path separator filename] (re-find #"(.+)([/\\])([^/\\]+.svg)$" (:path image))
+        tmp-dir (System/getProperty "java.io.tmpdir")
+        full-path (io/file (str tmp-dir relative-path))
+        normalized-path (str tmp-dir (:path image))]
+    (when (not (.exists full-path))
+      (.mkdirs full-path))
+    (try
+      (spit normalized-path normalized)
+      (assoc image :path normalized-path)
+      (catch Exception e
+        (println "Exception normalizing image" (:path image))
+        image))))
+
 (defn translate-inline-image
   [image align]
   (let [align (or (:align image) align)]
     (when (and image (.exists (io/file (str *base-directory* (:path image)))))
-      [:s:img {:percentWidth (when (not (:width image)) "20")
-               :width (:width image)
-               :height (or (:height image) (int (* *swf-height* 0.0651)))
-               :verticalAlign "middle"
-               :float (when (contains? #{"left" "right"} align) align)
-               :source (format "@Embed(source='%s')" 
-                               (:path image))}])))
+      (let [image (normalize-image image)]
+        [:s:img {:percentWidth (when (not (:width image)) "20")
+                 :width (:width image)
+                 :height (or (:height image) (int (* *swf-height* 0.0651)))
+                 :verticalAlign "middle"
+                 :float (when (contains? #{"left" "right"} align) align)
+                 :source (format "@Embed(source='%s')" 
+                                 (:path image))}]))))
 
 (defn translate-block-image
   "Creates an image cell to be used on an article header"
   [image align]
   (when (and image (.exists (io/file (str *base-directory* (:path image)))))
-    [:mx:Image {:percentWidth (when (not (:width image)) "20")
-               :width (:width image)
-               :height (or (:height image) (int (* *swf-height* 0.0651)))
-               :verticalAlign "middle"
-               :horizontalAlign (or (:align image) align)
-               :source (format "@Embed(source='%s')" 
-                               (:path image))}]))
+    (let [image (normalize-image image)]
+      [:mx:Image {:percentWidth (when (not (:width image)) "20")
+                  :width (:width image)
+                  :height (or (:height image) (int (* *swf-height* 0.0651)))
+                  :verticalAlign "middle"
+                  :horizontalAlign (or (:align image) align)
+                  :source (format "@Embed(source='%s')" 
+                                  (:path image))}])))
 
 (defn translate-image 
   [image align]
