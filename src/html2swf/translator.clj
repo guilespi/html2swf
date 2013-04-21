@@ -413,6 +413,7 @@
                            :fontFamily (parse-font-family (:font-family attrs))
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
+                           :textAlign (:text-align attrs)
                            :color (color-as-hex (:color attrs))
                            :backgroundColor (color-as-hex (:background-color attrs))}
       (binding [*inline-block* true] 
