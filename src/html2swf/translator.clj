@@ -37,9 +37,9 @@
   [attrs]
   (cond 
    (:border attrs) (create-border (:border attrs))
-   (:border-bottom attrs) (merge {:sides "bottom"} 
+   (:border-bottom attrs) (merge {:sides :bottom} 
                                  (create-border (:border-bottom attrs)))
-   (:border-top attrs) (merge {:sides "top"} 
+   (:border-top attrs) (merge {:sides :top} 
                               (create-border (:border-top attrs)))))
 
 (defn parse-font-family
@@ -147,6 +147,17 @@
          :left (seq [img pad])
          :right (seq [pad img]))])))
 
+(defn single-border-line
+  [border side]
+  (when (and (= side (:sides border))
+             (:size border)
+             (> (Integer. (:size border)) 0))    
+    [:s:HGroup {:percentWidth "100" :height (:size border)}
+     [:mx:Label {:percentWidth "3"}]
+     [:s:SkinnableContainer {:backgroundColor (or (:color border) "black")
+                             :percentWidth "94"
+                             :height (:size border)}]]))
+
 (defmethod translate :html
   [node ancestry styles]
   (println "Translating html")
@@ -224,12 +235,14 @@
 (defn build-single-row-header
   "Creates a header row using a single row-single header"
   [node ancestry styles]
-  (let [attrs (styles-for-node node ancestry styles)]
-    [:mx:HBox {:percentWidth "100"
-               :verticalAlign "middle"
-               :backgroundColor (color-as-hex (:background-color attrs))}
-     [:mx:Label {:percentWidth "3"}]
-     (translate-header node attrs ancestry styles)]))
+  (let [attrs (styles-for-node node ancestry styles)
+        border (parse-border attrs)]
+    (seq [[:mx:HBox {:percentWidth "100"
+                     :verticalAlign "middle"
+                     :backgroundColor (color-as-hex (:background-color attrs))}
+           [:mx:Label {:percentWidth "3"}]
+           (translate-header node attrs ancestry styles)]
+          (single-border-line border :bottom)])))
 
 (defmethod translate :h2
   [node ancestry styles]
@@ -345,13 +358,14 @@
         border (parse-border attrs)]
     [:s:BorderContainer {:borderStyle "solid"
                          :borderColor (:color border)
-                         :borderVisible (if border "true" "false")
+                         :borderVisible (if (and border (not (:sides border))) "true" "false")
                          :borderWeight (:size border)
                          :percentWidth "100"}
      [:mx:VBox {:backgroundColor (color-as-hex (:background-color attrs))
                 :borderVisible "false"
                 :percentWidth "100"}
-      (translate-seq node (children node) ancestry styles)]]))
+      (seq [(translate-seq node (children node) ancestry styles)
+            (single-border-line border :bottom)])]]))
 
 (defmethod translate :li
   [node ancestry styles]
