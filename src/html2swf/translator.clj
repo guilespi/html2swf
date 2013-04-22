@@ -129,7 +129,10 @@
   [parent childs ancestry styles]
   (map-indexed (fn [idx child]
                  (if (string? child)
-                   (inline-trim child)
+                   (let [text (inline-trim child)]
+                     (if (= idx 0) 
+                       (clojure.string/triml text)
+                       text))
                    (translate child (cons {:index (inc idx)
                                            :node parent} ancestry) styles))) 
                childs))
@@ -278,9 +281,11 @@
 
 (defmethod translate :td
   [node ancestry styles]
-  (let [attrs (styles-for-node node ancestry styles)]
+  (let [attrs (styles-for-node node ancestry styles)
+        border (parse-border attrs)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
                    :color (color-as-hex (:color attrs))
+                   :borderStyle (when border "solid")
                    :percentWidth "100"
                    :horizontalAlign (:text-align attrs)}
      (translate-text-seq node ancestry styles)]))
@@ -297,8 +302,7 @@
 
 (defmethod translate :tr
   [node ancestry styles]
-  [:mx:GridRow {:borderStyle "solid"
-                :percentWidth "100"}
+  [:mx:GridRow {:percentWidth "100"}
    (translate-seq node (children node) ancestry styles)])
 
 (defmethod translate :thead
@@ -311,11 +315,14 @@
 
 (defmethod translate :table
   [node ancestry styles]
-  [:mx:Grid {:horizontalGap "2" 
-             :verticalGap "0" 
-             :borderStyle "solid"
-             :percentWidth "100"}
-   (translate-seq node (children node) ancestry styles)])
+  (let [attrs (styles-for-node node ancestry styles)
+        border (parse-border attrs)]
+    [:mx:Grid {:horizontalGap "0" 
+               :verticalGap "0" 
+               :borderStyle (when border "solid")
+               :borderColor (:color border)
+               :percentWidth "100"}
+     (translate-seq node (children node) ancestry styles)]))
 
 (defmethod translate :footer
   [node ancestry styles]
