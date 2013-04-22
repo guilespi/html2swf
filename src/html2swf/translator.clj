@@ -107,7 +107,9 @@
                   :verticalAlign "middle"
                   :horizontalAlign (or (:align image) align)
                   :source (format "@Embed(source='%s')" 
-                                  (:path image))}])))
+                                  (clojure.string/replace (:path image)
+                                                          #"\\"
+                                                          "\\\\\\\\"))}])))
 
 (defn translate-image 
   [image align]
