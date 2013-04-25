@@ -50,9 +50,8 @@
   "Read other attributes of the image such as location (right bottom etc"
   [attrs]
   (when-let [background-image (or (:background-image attrs) (:background attrs))]
-    ;;FIXME: this extraction is broken only works if images and CSS are in subdirectories
-    ;;of the main path, probably to happen, but broken anyway
-    (when-let [[_ image-path] (re-find #"url\(\.\./([^)]+)" background-image)]
+    ;;css urls come fixed from the css parser to absolute paths
+    (when-let [[_ image-path] (re-find #"url\(([^)]+)\)" background-image)]
       {:path image-path
        :position (if (and (:background-position attrs)
                           (re-find #"right" (:background-position attrs)))
@@ -63,7 +62,7 @@
 
 (defn normalize-image
   [image]
-  (let [original-file (io/file (str *base-directory* (:path image)))
+  (let [original-file (io/file (:path image))
         svg-content (slurp original-file)
         normalized (-> svg-content
                        ;;remove viewboxes starting at 0,0
@@ -72,10 +71,7 @@
                        (clojure.string/replace #"(?i)(path d=\"[^k]+)kz" #(str (get %1 1) "Z")))
         [_ relative-path separator filename] (re-find #"(.+)([/\\])([^/\\]+.svg)$" (:path image))
         tmp-dir (System/getProperty "java.io.tmpdir")
-        full-path (io/file (str tmp-dir relative-path))
-        normalized-path (str tmp-dir (:path image))]
-    (when (not (.exists full-path))
-      (.mkdirs full-path))
+        normalized-path (str tmp-dir filename)]
     (try
       (spit normalized-path normalized)
       (assoc image :path normalized-path)
@@ -86,7 +82,7 @@
 (defn translate-inline-image
   [image align]
   (let [align (or (:align image) align)]
-    (when (and image (.exists (io/file (str *base-directory* (:path image)))))
+    (when (and image (.exists (io/file (:path image))))
       (let [image (normalize-image image)]
         [:s:img {:percentWidth (when (not (:width image)) "20")
                  :width (:width image)
@@ -99,7 +95,7 @@
 (defn translate-block-image
   "Creates an image cell to be used on an article header"
   [image align]
-  (when (and image (.exists (io/file (str *base-directory* (:path image)))))
+  (when (and image (.exists (io/file (:path image))))
     (let [image (normalize-image image)]
       [:mx:Image {:percentWidth (when (not (:width image)) "20")
                   :width (:width image)
@@ -271,7 +267,7 @@
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)
         props (:attrs node)
-        image {:path (:src props)
+        image {:path (str *base-directory* (:src props))
                :width (:width props)
                :height (:height props)
                :align (:text-align attrs)}]

@@ -20,9 +20,40 @@
                           #"nth-of-type\(([0-9]+)\)" 
                           #(str "nth-of-type-" (second %1))))
 
+(defn normalize-path
+  "Given a path with relative references collapses it
+   So /this/is/a/../path returns /this/is/path"
+  [path]
+  (if-let [[_ separator] (re-find #".*([/\\]).+$" path)]
+    ;;windows paths are converted to forward slash ones /
+    (let [path (clojure.string/replace path #"\\" "/")
+          dirs (clojure.string/split path (re-pattern separator))
+          collapsed (reduce (fn [list dir] (case dir 
+                                             "." list 
+                                             ".." (vec (butlast list))
+                                             (conj list dir))) [] dirs)]
+      (clojure.string/join separator collapsed))
+    path))
+
+(defn fix-url-paths
+  "Fixes the absolute url paths to absolutes. This avoids having to move each
+   css context with the styles in order to know what '../../' means"
+  [content path]
+  (if (and (string? path) (re-find  #"url\(\"?([^\"\)]+)\"?\)" content))
+    (if-let [[_ base-path css-file] (re-find #"(.+[/\\])([^/\\]+$)" path)]
+      (clojure.string/replace content 
+                              #"url\(\"?([^\"\)]+)\"?\)"
+                              #(format "url(\"%s\")" (normalize-path (str base-path (get %1 1)))))
+      content)
+    content))
+
 (defn- parse-stylesheets
   [sheets]
-  (let [contents (map #(-> (slurp %) debomify dos2unix hack-nth-of-type) sheets)]
+  (let [contents (map (fn [path] ( -> (slurp path) 
+                                      debomify 
+                                      dos2unix 
+                                      hack-nth-of-type 
+                                      (fix-url-paths path))) sheets)]
     (filter seq (apply concat
                        (map #(css/parse-css %) contents)))))
 
