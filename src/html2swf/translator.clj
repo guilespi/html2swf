@@ -279,8 +279,7 @@
     (map-indexed (fn [idx child] 
                    (if (string? child)
                      (if *inline-block*
-                       [:s:p {:align (:text-align attrs)} 
-                        child]
+                       child
                        [:mx:Label {:text (inline-trim (html/text node))
                                    :fontSize (parse-size (:font-size attrs))
                                    :fontFamily (parse-font-family (:font-family attrs))
@@ -366,9 +365,12 @@
 (defmethod translate :li
   [node ancestry styles]
   (println "Translating li")
-  (binding [*inline-block* true]
-    [:s:li (doall ;;never lazy evaluate outside bindings
-            (translate-text-seq node ancestry styles))]))
+  (let [attrs (styles-for-node node ancestry styles)]
+    (binding [*inline-block* true]
+      [:s:li 
+       [:s:p {:textAlign (:text-align attrs)}
+        (doall ;;never lazy evaluate outside bindings
+         (translate-text-seq node ancestry styles))]])))
 
 (defn translate-list
   [node ancestry styles list-type]
