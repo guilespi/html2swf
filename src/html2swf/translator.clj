@@ -378,6 +378,7 @@
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
                            :percentWidth "94"
+                           :paddingLeft "20"
                            :backgroundColor (color-as-hex (:background-color attrs))
                            :fontSize (parse-size (:font-size attrs))
                            :fontFamily (parse-font-family (:font-family attrs))
@@ -385,7 +386,7 @@
                            :multiline "true"
                            :lineBreak "toFit"
                            :color (color-as-hex (:color attrs))}
-      [:s:list {:listStyleType list-type}
+      [:s:list {:listStyleType list-type :listStylePosition "outside"}
        (translate-seq node (children node) ancestry styles)]]]))
 
 (defmethod translate :ul
@@ -429,6 +430,7 @@
      [:s:RichEditableText {:editable "false"
                            :focusEnabled "false"
                            :percentWidth "94"
+                           :paddingTop "2"
                            :fontFamily (parse-font-family (:font-family attrs))
                            :fontSize (parse-size (:font-size attrs))
                            :fontWeight (:font-weight attrs)
