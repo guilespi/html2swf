@@ -12,8 +12,10 @@
 
 (defn inline-trim
   [^String string]
-  (-> (clojure.string/replace string #"\s\s+" " ")
-      (hutil/escape-html)))
+  (let [trimmed (clojure.string/replace string #"\s\s+" " ")]
+    (if *inline-block*
+      (hutil/escape-html trimmed)
+      trimmed)))
 
 (defn parse-size
   [size]
