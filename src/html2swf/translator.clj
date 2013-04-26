@@ -407,10 +407,15 @@
   [node ancestry styles]
   (println "Translating b")
   (let [attrs (styles-for-node node ancestry styles)]
-    [:s:span {:fontWeight (or (:font-weight attrs) "bold")
-              :fontFamily (parse-font-family (:font-family attrs))
-              :textDecoration (or (:text-decoration attrs) "none")}
-     (html/text node)]))
+    (if *inline-block*
+      [:s:span {:fontWeight (or (:font-weight attrs) "bold")
+                :fontFamily (parse-font-family (:font-family attrs))
+                :textDecoration (or (:text-decoration attrs) "none")}
+       (html/text node)]
+      [:mx:Label {:fontWeight (or (:font-weight attrs) "bold")
+                  :text (html/text node)
+                  :fontSize (parse-size (:font-size attrs))
+                  :fontFamily (parse-font-family (:font-family attrs))}])))
 
 (defmethod translate :span
   [node ancestry styles]
