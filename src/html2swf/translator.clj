@@ -282,7 +282,7 @@
                    (if (string? child)
                      (if *inline-block*
                        child
-                       [:mx:Label {:text (inline-trim (html/text node))
+                       [:mx:Label {:text (clojure.string/trim child)
                                    :fontSize (parse-size (:font-size attrs))
                                    :fontFamily (parse-font-family (:font-family attrs))
                                    :textAlign (:text-align attrs)}])
