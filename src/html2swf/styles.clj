@@ -28,13 +28,16 @@
 (defn selector-function-match?
   [named-fn selector node parents]
   (cond 
-   (re-find #"nth-of-type" named-fn) (let [[_ nth-val] (re-find #"nth-of-type-([0-9]+)" named-fn)
+   (re-find #"nth-of-type" named-fn) (let [[_ nth-val] (re-find #"nth-of-type-([0-9]+|even|odd)" named-fn)
                                            parent (first parents)
                                            abs-idx (:index parent)
                                            parent-node (:node parent)
                                            first-childs (take abs-idx (filter map? (:content parent-node)))
                                            matching-type (filter #(partial-condition-match? selector % (rest parents)) first-childs)]
-                                       (= (Integer. nth-val) (count matching-type)))
+                                       (cond
+                                        (= nth-val "even") (even? (count matching-type))
+                                        (= nth-val "odd") (odd? (count matching-type))
+                                        :else (= (Integer. nth-val) (count matching-type))))
 
    (= named-fn "last-of-type") (let [parent (first parents)
                                      abs-idx (:index parent)

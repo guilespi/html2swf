@@ -17,7 +17,7 @@
   ;;css parser does not support css3 selector nth-of-type as is, tweak it a little bit 
   [content]
   (clojure.string/replace content 
-                          #"nth-of-type\(([0-9]+)\)" 
+                          #"nth-of-type\(([0-9]+|even|odd)\)" 
                           #(str "nth-of-type-" (second %1))))
 
 (defn normalize-path
