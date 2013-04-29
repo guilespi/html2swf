@@ -9,6 +9,7 @@
 (def ^:dynamic *swf-width* 1024)
 (def ^:dynamic *swf-height* 768)
 (def ^:dynamic *base-directory* nil)
+(def ^:dynamic *inline-block* false)
 
 (defn inline-trim
   [^String string]
@@ -59,8 +60,6 @@
                           (re-find #"right" (:background-position attrs)))
                    :right
                    :left)})))
-
-(def ^:dynamic *inline-block* false)
 
 (defn normalize-image
   [image]
@@ -304,7 +303,8 @@
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
-                   :color (color-as-hex (:color attrs))}
+                   :color (color-as-hex (:color attrs))
+                   :horizontalAlign (:text-align attrs)}
      [:mx:Label {:text (inline-trim (html/text node))
                  :fontWeight "bold"
                  :fontFamily (parse-font-family (:font-family attrs))
@@ -333,6 +333,28 @@
                :borderColor (:color border)
                :percentWidth "100"}
      (translate-seq node (children node) ancestry styles)]))
+
+
+(defmethod translate :dl
+  [node ancestry styles]
+  [:mx:VBox {:percentWidth "94"}
+   (loop [definitions (children node) entries []]
+     (if (seq definitions)
+       (let [dt (first definitions)
+             dt-attrs (styles-for-node dt (conj ancestry node) styles)
+             dd (second definitions)
+             dd-attrs (styles-for-node dd (conj ancestry node) styles)
+             row [:mx:HBox 
+                  [:mx:Label {:text (inline-trim (html/text dt))
+                              :fontWeight (:font-weight dt-attrs)
+                              :fontFamily (parse-font-family (:font-family dt-attrs))
+                              :fontSize (parse-size (:font-size dt-attrs))}]
+                  [:mx:Label {:text (inline-trim (html/text dd))
+                              :fontWeight (:font-weight dd-attrs)
+                              :fontFamily (parse-font-family (:font-family dd-attrs))
+                              :fontSize (parse-size (:font-size dd-attrs))}]]]
+         (recur (drop 2 definitions) (conj entries row)))
+       (seq entries)))])
 
 (defmethod translate :footer
   [node ancestry styles]
