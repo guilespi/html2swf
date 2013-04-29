@@ -8,13 +8,17 @@
 
 (defn compile-source
   "From a proper mxml string create a filename.swf file"
-  [filename content]
+  [filename content output]
   (println (format "Compiling %s.mxml ..." filename))
   (let [source-file (str filename ".mxml")
         mxml (str "<?xml version=\"1.0\" encoding=\"utf-8\"?>" content)
         compiler (or (System/getenv "MXML_COMPILER") *compiler*)]
     (spit source-file mxml :append false)
-    (let [result (sh compiler "-debug=false" "-optimize=true" "-swf-version=10" source-file)
+    (let [result (sh compiler "-debug=false" 
+                              "-optimize=true" 
+                              "-swf-version=10" 
+                              (str "--output=" (str output ".swf"))
+                              source-file)
           exit (:exit result)]
       (= 0 exit))))
 
@@ -29,7 +33,9 @@
         object-content (translator/translate-page html-content styles width height base-directory)
         [_ component-name] (re-find #"[/\\]([^/\\]+)\.html$" filename)
         escaped-name (clojure.string/replace component-name #"[-\.]" "")]
-    (compile-source (str base-directory escaped-name) object-content)))
+    (compile-source (str base-directory escaped-name) 
+                    object-content 
+                    (str base-directory component-name))))
 
 (defn build-directory
   "Convert a complete directory of html files to swf ones"
