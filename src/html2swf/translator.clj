@@ -337,6 +337,7 @@
 
 (defmethod translate :dl
   [node ancestry styles]
+  (println "Translating dl")
   [:mx:VBox {:percentWidth "94"}
    (loop [definitions (children node) entries []]
      (if (seq definitions)
@@ -360,6 +361,14 @@
   [node ancestry styles]
   (println "Translating footer")
   (translate-header-text node ancestry styles))
+
+(defmethod translate :div
+  [node ancestry styles]
+  (println "Translating div")
+  (let [attrs (styles-for-node node ancestry styles)
+        image (extract-image attrs)]
+    [:mx:HBox {:percentWidth "94"} ;;needs to consider margin
+     (translate-seq node (children node) ancestry styles)]))
 
 (defmethod translate :hgroup
   [node ancestry styles]
