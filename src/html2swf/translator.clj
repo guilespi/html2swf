@@ -40,6 +40,10 @@
   [attrs]
   (cond 
    (:border attrs) (create-border (:border attrs))
+   (:border-right attrs) (merge {:sides :right}
+                                (create-border (:border-right attrs)))
+   (:border-left attrs) (merge {:sides :left}
+                               (create-border (:border-left attrs)))
    (:border-bottom attrs) (merge {:sides :bottom} 
                                  (create-border (:border-bottom attrs)))
    (:border-top attrs) (merge {:sides :top} 
