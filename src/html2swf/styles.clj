@@ -141,7 +141,6 @@
 (def ^:dynamic *inherited-css-attributes* [:color
                                            :text-align 
                                            :font-size
-                                           :background-color
                                            :font-family])
 
 (defn- single-node-styles

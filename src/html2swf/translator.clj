@@ -216,10 +216,13 @@
   "Creates a text cell to be used on an article header"
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)
+        parent-attrs (styles-for-node (:node (first ancestry)) (rest ancestry) styles)
         text (html/text node)
         hide (= (:display attrs) "none")]
     (when (not hide)
-      [:s:BorderContainer {:backgroundColor (color-as-hex (:background-color attrs))
+      ;;for some reason background-color should be inherited in h2/headers
+      [:s:BorderContainer {:backgroundColor (color-as-hex (or (:background-color attrs)
+                                                              (:background-color parent-attrs)))
                            :borderVisible "false"
                            :height (int (* *swf-height* 0.0651))
                            :percentWidth "100"}
