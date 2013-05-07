@@ -28,26 +28,37 @@
                                            (/ 1 16)))
      :else size)))
 
+(defn filter-visible-border
+  [border]
+  (let [size (:size border)]
+    (if (re-find #"^\d+$" size)
+      (when (> (Integer. size) 0)
+        border)
+      border)))
+
 (defn create-border
   [border]
   (when border
     (when-let [[_ size style color] (re-find #"([^ ]+) ([^ ]+) (.+)$" border)]
-      {:size (parse-size size)
-       :style style
-       :color (color-as-hex color)})))
+      (filter-visible-border
+       {:size (parse-size size)
+        :style style
+        :color (color-as-hex color)}))))
 
 (defn parse-border
   [attrs]
-  (cond 
-   (:border attrs) (create-border (:border attrs))
-   (:border-right attrs) (merge {:sides :right}
-                                (create-border (:border-right attrs)))
-   (:border-left attrs) (merge {:sides :left}
-                               (create-border (:border-left attrs)))
-   (:border-bottom attrs) (merge {:sides :bottom} 
-                                 (create-border (:border-bottom attrs)))
-   (:border-top attrs) (merge {:sides :top} 
-                              (create-border (:border-top attrs)))))
+  (let [border (cond 
+                (:border attrs) (create-border (:border attrs))
+                (:border-right attrs) (merge {:sides :right}
+                                             (create-border (:border-right attrs)))
+                (:border-left attrs) (merge {:sides :left}
+                                            (create-border (:border-left attrs)))
+                (:border-bottom attrs) (merge {:sides :bottom} 
+                                              (create-border (:border-bottom attrs)))
+                (:border-top attrs) (merge {:sides :top} 
+                                           (create-border (:border-top attrs))))]
+    (when (:size border)
+      border)))
 
 (defn parse-font-family
   [font-family]
@@ -319,7 +330,8 @@
 (defmethod translate :tr
   [node ancestry styles]
   (let [attrs (styles-for-node node ancestry styles)
-        border (parse-border attrs)]
+        border (parse-border attrs)
+        _ (println "attrs for tr are" attrs "border is " border)]
     [:mx:GridRow {:percentWidth "100"
                   :borderStyle (when border "solid")}
      (translate-seq node (children node) ancestry styles)]))
