@@ -301,9 +301,11 @@
 
 (defmethod translate :th
   [node ancestry styles]
-  (let [attrs (styles-for-node node ancestry styles)]
+  (let [attrs (styles-for-node node ancestry styles)
+        border (parse-border attrs)]
     [:mx:GridItem {:backgroundColor (color-as-hex (:background-color attrs))
                    :color (color-as-hex (:color attrs))
+                   :borderStyle (when border "solid")
                    :horizontalAlign (:text-align attrs)}
      [:mx:Label {:text (inline-trim (html/text node))
                  :fontWeight "bold"
