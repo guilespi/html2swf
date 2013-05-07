@@ -478,7 +478,7 @@
                            :color (color-as-hex (:color attrs))
                            :backgroundColor (color-as-hex (:background-color attrs))}
       (binding [*inline-block* true] 
-        (translate-seq node childs ancestry styles))]]))
+        (doall (translate-seq node childs ancestry styles)))]]))
 
 (defn translate-page 
   [html-content styles width height base-directory]
