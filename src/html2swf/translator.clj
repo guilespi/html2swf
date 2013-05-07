@@ -213,7 +213,7 @@
                    :fontFamily (parse-font-family (:font-family attrs))
                    :fontSize (parse-size (:font-size attrs))
                    :color (color-as-hex (:color attrs))
-                   :fontWeight "bold"
+                   :fontWeight (or (:font-weight attrs) "bold")
                    :textAlign (:text-align attrs)}]])))
 
 (defn translate-header
