@@ -312,8 +312,11 @@
 
 (defmethod translate :tr
   [node ancestry styles]
-  [:mx:GridRow {:percentWidth "100"}
-   (translate-seq node (children node) ancestry styles)])
+  (let [attrs (styles-for-node node ancestry styles)
+        border (parse-border attrs)]
+    [:mx:GridRow {:percentWidth "100"
+                  :borderStyle (when border "solid")}
+     (translate-seq node (children node) ancestry styles)]))
 
 (defmethod translate :thead
   [node ancestry styles]
