@@ -28,6 +28,13 @@
                                            (/ 1 16)))
      :else size)))
 
+(defn parse-font-weight
+  [weight]
+  (when weight
+    (cond 
+     (= weight "lighter") "normal"
+     :else weight)))
+
 (defn filter-visible-border
   [border]
   (let [size (:size border)]
@@ -232,7 +239,7 @@
                    :fontFamily (parse-font-family (:font-family attrs))
                    :fontSize (parse-size (:font-size attrs))
                    :color (color-as-hex (:color attrs))
-                   :fontWeight (or (:font-weight attrs) "bold")
+                   :fontWeight (parse-font-weight (or (:font-weight attrs) "bold"))
                    :textAlign (:text-align attrs)}]])))
 
 (defn translate-header
@@ -372,11 +379,11 @@
              dd-attrs (styles-for-node dd (conj ancestry node) styles)
              row [:mx:HBox 
                   [:mx:Label {:text (inline-trim (html/text dt))
-                              :fontWeight (:font-weight dt-attrs)
+                              :fontWeight (parse-font-weight (:font-weight dt-attrs))
                               :fontFamily (parse-font-family (:font-family dt-attrs))
                               :fontSize (parse-size (:font-size dt-attrs))}]
                   [:mx:Label {:text (inline-trim (html/text dd))
-                              :fontWeight (:font-weight dd-attrs)
+                              :fontWeight (parse-font-weight (:font-weight dd-attrs))
                               :fontFamily (parse-font-family (:font-family dd-attrs))
                               :fontSize (parse-size (:font-size dd-attrs))}]]]
          (recur (drop 2 definitions) (conj entries row)))
@@ -442,7 +449,7 @@
                            :backgroundColor (color-as-hex (:background-color attrs))
                            :fontSize (parse-size (:font-size attrs))
                            :fontFamily (parse-font-family (:font-family attrs))
-                           :fontWeight (:font-weight attrs)
+                           :fontWeight (parse-font-weight (:font-weight attrs))
                            :multiline "true"
                            :lineBreak "toFit"
                            :color (color-as-hex (:color attrs))}
@@ -464,11 +471,11 @@
   (println "Translating b")
   (let [attrs (styles-for-node node ancestry styles)]
     (if *inline-block*
-      [:s:span {:fontWeight (or (:font-weight attrs) "bold")
+      [:s:span {:fontWeight (parse-font-weight (or (:font-weight attrs) "bold"))
                 :fontFamily (parse-font-family (:font-family attrs))
                 :textDecoration (or (:text-decoration attrs) "none")}
        (html/text node)]
-      [:mx:Label {:fontWeight (or (:font-weight attrs) "bold")
+      [:mx:Label {:fontWeight (parse-font-weight (or (:font-weight attrs) "bold"))
                   :text (html/text node)
                   :fontSize (parse-size (:font-size attrs))
                   :fontFamily (parse-font-family (:font-family attrs))}])))
@@ -498,7 +505,7 @@
                            :paddingTop "2"
                            :fontFamily (parse-font-family (:font-family attrs))
                            :fontSize (parse-size (:font-size attrs))
-                           :fontWeight (:font-weight attrs)
+                           :fontWeight (parse-font-weight (:font-weight attrs))
                            :textAlign (:text-align attrs)
                            :color (color-as-hex (:color attrs))
                            :backgroundColor (color-as-hex (:background-color attrs))}
