@@ -49,7 +49,9 @@
                                       abs-idx (:index parent)
                                       parent-node (:node parent)
                                       first-childs (take (dec abs-idx) (filter map? (:content parent-node)))]
-                                  (empty? (filter #(partial-condition-match? selector % (rest parents)) first-childs)))))
+                                  (empty? (filter #(partial-condition-match? selector % (rest parents)) first-childs)))
+   (or (= named-fn "before")
+       (= named-fn "after"))    true))
 
 ;;this are the selector:nth-of-type kind of selectors
 ;;first need to match first side traditionally then check if the function is true

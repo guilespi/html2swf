@@ -505,6 +505,16 @@
                 :fontFamily "_typeWriter"}
        (html/text node)])))
 
+(defn wrap-content
+  [content attrs]
+  (let [wrapper (:content attrs)]
+    (cond
+     (or (= wrapper "\"“\"")
+         (= wrapper "\"”\"")) (str "“" content "”")
+     (or (= wrapper "\"‘\"")
+         (= wrapper "\"’\"")) (str "‘" content "’")
+     :else content)))
+
 (defmethod translate :dfn
   [node ancestry styles]
   (println "Translating dfn")
@@ -512,7 +522,7 @@
     (when *inline-block*
       [:s:span {:textDecoration (or (:text-decoration attrs) "none")
                 :fontFamily (parse-font-family (:font-family attrs))}
-       (html/text node)])))
+       (wrap-content (html/text node) attrs)])))
 
 (defmethod translate :kbd
   [node ancestry styles]
@@ -521,7 +531,7 @@
     (when *inline-block*
       [:s:span {:textDecoration (or (:text-decoration attrs) "none")
                 :fontFamily "_typeWriter"}
-       (html/text node)])))
+       (wrap-content (html/text node) attrs)])))
 
 (defmethod translate :p
   [node ancestry styles]
