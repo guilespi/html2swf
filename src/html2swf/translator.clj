@@ -62,7 +62,8 @@
 
 (defn parse-font-family
   [font-family]
-  (clojure.string/replace font-family #"\"" ""))
+  (when font-family
+    (clojure.string/replace font-family #"\"" "")))
 
 (defn extract-image
   "Read other attributes of the image such as location (right bottom etc"
