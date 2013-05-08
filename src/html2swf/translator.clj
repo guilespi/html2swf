@@ -282,6 +282,11 @@
   (println "Translating h4")
   (translate-header-text node ancestry styles))
 
+(defmethod translate :h5
+  [node ancestry styles]
+  (println "Translating h5")
+  (translate-header-text node ancestry styles))
+
 (defmethod translate :header
   [node ancestry styles]
   (println "Translating header")
@@ -490,6 +495,33 @@
                 :backgroundColor (color-as-hex (:background-color attrs))}
        (html/text node)]
       (translate-header-text node ancestry styles))))
+
+(defmethod translate :code
+  [node ancestry styles]
+  (println "Translating code")
+  (let [attrs (styles-for-node node ancestry styles)]
+    (when *inline-block*
+      [:s:span {:textDecoration (or (:text-decoration attrs) "none")
+                :fontFamily "_typeWriter"}
+       (html/text node)])))
+
+(defmethod translate :dfn
+  [node ancestry styles]
+  (println "Translating dfn")
+  (let [attrs (styles-for-node node ancestry styles)]
+    (when *inline-block*
+      [:s:span {:textDecoration (or (:text-decoration attrs) "none")
+                :fontFamily (parse-font-family (:font-family attrs))}
+       (html/text node)])))
+
+(defmethod translate :kbd
+  [node ancestry styles]
+  (println "Translating kbd")
+  (let [attrs (styles-for-node node ancestry styles)]
+    (when *inline-block*
+      [:s:span {:textDecoration (or (:text-decoration attrs) "none")
+                :fontFamily "_typeWriter"}
+       (html/text node)])))
 
 (defmethod translate :p
   [node ancestry styles]
